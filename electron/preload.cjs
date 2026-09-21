@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("dateApp", {
   chooseTemplates: () => ipcRenderer.invoke("templates:choose"),
   prepareTemplates: () => ipcRenderer.invoke("templates:prepare"),
   chooseOutput: () => ipcRenderer.invoke("output:choose"),
+  validateDirectory: (folderPath) => ipcRenderer.invoke("path:validate-directory", folderPath),
   previewTemplate: (filePath) => ipcRenderer.invoke("templates:preview", filePath),
   renderPreview: (payload) => ipcRenderer.invoke("templates:render-preview", payload),
   analyzeTemplate: (filePath) => ipcRenderer.invoke("templates:analyze", filePath),
