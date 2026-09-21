@@ -587,6 +587,16 @@ export default function App() {
     setHistory([]);
   }
 
+  async function openFolder(folderPath: string) {
+    if (!window.dateApp || !folderPath) return;
+    setError("");
+    try {
+      await window.dateApp.openFolder(folderPath);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    }
+  }
+
   async function generate(scope: "current" | "selected" | "all") {
     if (!canGenerate) return;
 
@@ -863,7 +873,7 @@ export default function App() {
                     <span className={item.complete ? "history-badge complete" : "history-badge"}>
                       {item.complete ? "完整" : "需检查"}
                     </span>
-                    <button className="history-open" type="button" onClick={() => void window.dateApp.openFolder(item.folder)}>
+                    <button className="history-open" type="button" onClick={() => void openFolder(item.folder)}>
                       <ExternalLink size={13} />
                     </button>
                   </div>
@@ -924,7 +934,7 @@ export default function App() {
 
         <div className="action-buttons">
           {result ? (
-            <button className="open-button" type="button" onClick={() => void window.dateApp.openFolder(result.outputDir)}>
+            <button className="open-button" type="button" onClick={() => void openFolder(result.openPath || result.outputDir)}>
               <ExternalLink size={16} /> 打开文件夹
             </button>
           ) : null}
