@@ -1,3 +1,5 @@
+import { useState, type CSSProperties } from "react";
+
 type Props = {
   label: string;
   value: number;
@@ -9,8 +11,15 @@ type Props = {
 };
 
 export function RangeControl({ label, value, min, max, step, hint, onChange }: Props) {
+  const [engaged, setEngaged] = useState(false);
+  const percentage = ((value - min) / (max - min)) * 100;
+  const displayValue = Number(value.toFixed(step < 1 ? 1 : 0));
+
   return (
-    <div className="range-control">
+    <div
+      className={`range-control ${engaged ? "is-engaged" : ""}`}
+      style={{ "--range-value": `${percentage}%` } as CSSProperties}
+    >
       <div className="range-heading">
         <div>
           <strong>{label}</strong>
@@ -22,22 +31,35 @@ export function RangeControl({ label, value, min, max, step, hint, onChange }: P
             min={min}
             max={max}
             step={step}
-            value={Number(value.toFixed(1))}
+            value={displayValue}
+            onFocus={() => setEngaged(true)}
+            onBlur={() => setEngaged(false)}
             onChange={(event) => onChange(Number(event.target.value))}
           />
           <span>%</span>
         </label>
       </div>
-      <input
-        className="range-input"
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(event) => onChange(Number(event.target.value))}
-        style={{ "--range-value": `${((value - min) / (max - min)) * 100}%` } as React.CSSProperties}
-      />
+
+      <div className="range-track-wrap">
+        <div className="range-value-popover" aria-hidden="true">
+          {displayValue}%
+        </div>
+        <input
+          className="range-input"
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          aria-label={label}
+          onPointerDown={() => setEngaged(true)}
+          onPointerUp={() => setEngaged(false)}
+          onPointerCancel={() => setEngaged(false)}
+          onFocus={() => setEngaged(true)}
+          onBlur={() => setEngaged(false)}
+          onChange={(event) => onChange(Number(event.target.value))}
+        />
+      </div>
     </div>
   );
 }
