@@ -82,6 +82,8 @@ export default function App() {
   const [outputDir, setOutputDir] = useState("");
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedTemplateNames, setSelectedTemplateNames] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<"single" | "grid">("single");
   const [previewData, setPreviewData] = useState("");
   const [analysis, setAnalysis] = useState<TemplateAnalysis | null>(null);
   const [mode, setMode] = useState<"single" | "range">("single");
@@ -100,6 +102,7 @@ export default function App() {
   const [progress, setProgress] = useState<GenerationProgress | null>(null);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [generatingScope, setGeneratingScope] = useState<"current" | "selected" | "all">("all");
   const [preparing, setPreparing] = useState(false);
   const [settingsReady, setSettingsReady] = useState(false);
   const [history, setHistory] = useState<GenerationHistoryItem[]>([]);
@@ -149,6 +152,7 @@ export default function App() {
         if (typeof parsed.bold === "boolean") setBold(parsed.bold);
         if (Number.isFinite(parsed.letterSpacing)) setLetterSpacing(parsed.letterSpacing);
         if (parsed.mode === "single" || parsed.mode === "range") setMode(parsed.mode);
+        if (parsed.viewMode === "single" || parsed.viewMode === "grid") setViewMode(parsed.viewMode);
         if (typeof parsed.outputDir === "string") setOutputDir(parsed.outputDir);
 
         if (typeof parsed.templateDir === "string" && parsed.templateDir && window.dateApp) {
@@ -156,6 +160,7 @@ export default function App() {
           if (!cancelled && restored?.templates?.length) {
             setTemplateDir(restored.dir);
             setTemplates(restored.templates);
+            setSelectedTemplateNames(restored.templates.map((item) => item.name));
             setSelectedIndex(0);
           }
         }
@@ -187,6 +192,7 @@ export default function App() {
         templateDir,
         outputDir,
         mode,
+        viewMode,
       }),
     );
   }, [
@@ -201,6 +207,7 @@ export default function App() {
     templateDir,
     outputDir,
     mode,
+    viewMode,
   ]);
 
   useEffect(() => {
@@ -264,7 +271,13 @@ export default function App() {
   }, [templates, selectedIndex, adaptivePosition]);
 
   const dateCount = mode === "range" ? inclusiveDays(startDate, endDate) : 1;
+  const selectedCount = selectedTemplateNames.length;
   const totalImages = templates.length * dateCount;
+  const activeTemplateCount =
+    generatingScope === "current" ? (templates[selectedIndex] ? 1 : 0) :
+    generatingScope === "selected" ? selectedCount :
+    templates.length;
+  const activeTotalImages = activeTemplateCount * dateCount;
   const tomorrow = addDaysValue(today, 1);
   const afterTomorrow = addDaysValue(today, 2);
   const nextWeekEnd = addDaysValue(today, 6);
@@ -281,9 +294,10 @@ export default function App() {
     if (!templates.length) return "先选择模板文件夹";
     const countLabel = templates.length === 32 ? "32 个模板已就绪" : `已识别 ${templates.length} 个模板（常规应为 32）`;
     if (!outputDir) return `${countLabel} · 请选择输出位置`;
-    if (mode === "range") return `${countLabel} × ${dateCount} 天 · 将生成 ${totalImages} 张图片`;
-    return `${countLabel} · ${prettyDate(startDate)} · 将生成 ${templates.length} 张图片`;
-  }, [templates.length, outputDir, mode, dateCount, totalImages, startDate]);
+    const selectedLabel = selectedCount && selectedCount !== templates.length ? ` · 已选 ${selectedCount} 张` : "";
+    if (mode === "range") return `${countLabel}${selectedLabel} · ${dateCount} 天范围`;
+    return `${countLabel}${selectedLabel} · ${prettyDate(startDate)}`;
+  }, [templates.length, outputDir, mode, dateCount, startDate, selectedCount]);
 
   async function chooseTemplates() {
     setError("");
@@ -295,6 +309,7 @@ export default function App() {
     if (!selection) return;
     setTemplateDir(selection.dir);
     setTemplates(selection.templates);
+    setSelectedTemplateNames(selection.templates.map((item) => item.name));
     setSelectedIndex(0);
     setAnalysis(null);
     setResult(null);
@@ -312,6 +327,7 @@ export default function App() {
       if (!selection) return;
       setTemplateDir(selection.dir);
       setTemplates(selection.templates);
+      setSelectedTemplateNames(selection.templates.map((item) => item.name));
       setSelectedIndex(0);
       setAnalysis(null);
       setOutputDir(selection.suggestedOutput);
@@ -408,6 +424,25 @@ export default function App() {
     setPresetName("");
   }
 
+  function toggleTemplate(name: string) {
+    setSelectedTemplateNames((items) =>
+      items.includes(name) ? items.filter((item) => item !== name) : [...items, name],
+    );
+  }
+
+  function selectAllTemplates() {
+    setSelectedTemplateNames(templates.map((item) => item.name));
+  }
+
+  function clearTemplateSelection() {
+    setSelectedTemplateNames([]);
+  }
+
+  function invertTemplateSelection() {
+    const selected = new Set(selectedTemplateNames);
+    setSelectedTemplateNames(templates.filter((item) => !selected.has(item.name)).map((item) => item.name));
+  }
+
   async function refreshHistory() {
     if (!window.dateApp) return;
     try {
@@ -474,8 +509,23 @@ export default function App() {
     setHistory([]);
   }
 
-  async function generate() {
+  async function generate(scope: "current" | "selected" | "all") {
     if (!canGenerate) return;
+
+    let templateNames: string[] | undefined;
+    if (scope === "current") {
+      const current = templates[selectedIndex];
+      if (!current) return;
+      templateNames = [current.name];
+    } else if (scope === "selected") {
+      if (!selectedTemplateNames.length) {
+        setError("请先在网格视图中勾选至少一张模板。");
+        return;
+      }
+      templateNames = selectedTemplateNames;
+    }
+
+    setGeneratingScope(scope);
     setGenerating(true);
     setProgress(null);
     setResult(null);
@@ -494,6 +544,8 @@ export default function App() {
         fontFamily,
         bold,
         letterSpacing,
+        templateNames,
+        exportScope: scope,
       });
       setResult(finalResult);
       await refreshHistory();
@@ -725,7 +777,10 @@ export default function App() {
                     <div className={item.complete ? "history-dot complete" : "history-dot"} />
                     <div className="history-copy">
                       <strong>{prettyDate(item.date)}</strong>
-                      <span>{item.source === "auto" ? "自动" : "手动"} · {item.actual}/{item.expected} 张</span>
+                      <span>
+                        {item.source === "auto" ? "自动" : item.scope === "current" ? "当前" : item.scope === "selected" ? "选中" : "全部"}
+                        {" · "}{item.actual}/{item.expected} 张
+                      </span>
                     </div>
                     <span className={item.complete ? "history-badge complete" : "history-badge"}>
                       {item.complete ? "完整" : "需检查"}
@@ -745,6 +800,8 @@ export default function App() {
         <PreviewPanel
           templates={templates}
           selectedIndex={selectedIndex}
+          selectedTemplateNames={selectedTemplateNames}
+          viewMode={viewMode}
           previewData={previewData}
           dateLabel={prettyDate(startDate)}
           xRatio={xRatio}
@@ -759,6 +816,12 @@ export default function App() {
           onNext={() => setSelectedIndex((index) => (index + 1) % templates.length)}
           onPickPosition={(x, y) => { setXRatio(Number(x.toFixed(1))); setYRatio(Number(y.toFixed(1))); }}
           onChooseTemplates={() => void chooseTemplates()}
+          onViewModeChange={setViewMode}
+          onOpenTemplate={(index) => setSelectedIndex(index)}
+          onToggleTemplate={toggleTemplate}
+          onSelectAll={selectAllTemplates}
+          onClearSelection={clearTemplateSelection}
+          onInvertSelection={invertTemplateSelection}
         />
       </main>
 
@@ -779,7 +842,7 @@ export default function App() {
           ) : generating ? (
             <>
               <div className="progress-ring" style={{ "--progress": `${completion * 3.6}deg` } as React.CSSProperties} />
-              <div><strong>正在生成 {progress?.done ?? 0} / {progress?.total ?? totalImages}</strong><span>{progress?.file || "正在准备图片…"}</span></div>
+              <div><strong>正在生成 {progress?.done ?? 0} / {progress?.total ?? activeTotalImages}</strong><span>{progress?.file || "正在准备图片…"}</span></div>
             </>
           ) : (
             <div><strong>{summary}</strong><span>所有处理都在本机完成，不会上传模板图片。</span></div>
@@ -792,9 +855,27 @@ export default function App() {
               <ExternalLink size={16} /> 打开文件夹
             </button>
           ) : null}
-          <button className="primary-button" type="button" disabled={!canGenerate} onClick={() => void generate()}>
+          <button
+            className="scope-button"
+            type="button"
+            disabled={!canGenerate || generating}
+            onClick={() => void generate("current")}
+          >
+            导出当前
+          </button>
+          <button
+            className="scope-button selected-export"
+            type="button"
+            disabled={!canGenerate || generating || selectedCount === 0}
+            onClick={() => void generate("selected")}
+          >
+            导出选中 {selectedCount ? `(${selectedCount})` : ""}
+          </button>
+          <button className="primary-button" type="button" disabled={!canGenerate} onClick={() => void generate("all")}>
             <Play size={16} fill="currentColor" />
-            {generating ? "正在生成…" : mode === "range" ? "开始批量生成" : "生成今日配料表"}
+            {generating
+              ? generatingScope === "current" ? "正在导出当前…" : generatingScope === "selected" ? "正在导出选中…" : "正在导出全部…"
+              : `导出全部 ${templates.length || 0} 张`}
           </button>
         </div>
       </footer>
