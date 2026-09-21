@@ -236,7 +236,7 @@ export function PreviewPanel({
             </div>
           ) : (
             <div className="preview-empty">
-              <div className="empty-icon"><ImageIcon size={28} /></div>
+              <div className="empty-icon brand-empty-icon"><img src="./feather-quill.png" alt="" /></div>
               <h3>先选一组配料表模板</h3>
               <p>选择包含 32 张无日期模板的文件夹，右侧会立即显示真实效果。</p>
               <button className="preview-empty-action" type="button" onClick={onChooseTemplates}>
