@@ -296,31 +296,26 @@ async function isExistingDirectory(value) {
   }
 }
 
-function openDirectoryNative(folderPath) {
+async function openDirectoryNative(folderPath) {
   const normalized = path.normalize(folderPath);
 
-  if (process.platform === "win32") {
-    return new Promise((resolve, reject) => {
-      const explorerPath = path.join(process.env.WINDIR || "C:\\Windows", "explorer.exe");
-      const child = spawn(explorerPath, [normalized], {
-        detached: true,
-        windowsHide: true,
-        stdio: "ignore",
-        shell: false,
-      });
+  // Electron's shell API uses Unicode JS strings and is the preferred path.
+  // It also gives us a concrete error string instead of merely confirming
+  // that explorer.exe was spawned.
+  const shellError = await shell.openPath(normalized);
+  if (!shellError) return true;
 
-      child.once("error", reject);
-      child.once("spawn", () => {
-        child.unref();
-        resolve(true);
-      });
-    });
+  if (process.platform === "win32") {
+    const explorerPath = path.join(process.env.WINDIR || "C:\\Windows", "explorer.exe");
+    try {
+      await execFilePromise(explorerPath, [normalized]);
+      return true;
+    } catch {
+      // Fall through to the useful Electron error below.
+    }
   }
 
-  return shell.openPath(normalized).then((error) => {
-    if (error) throw new Error(error);
-    return true;
-  });
+  throw new Error(shellError || "系统没有成功打开这个文件夹。");
 }
 
 async function readJson(name, fallback) {
@@ -705,9 +700,11 @@ function registerIpc() {
     }
 
     try {
-      return await openDirectoryNative(folderPath);
-    } catch {
-      throw new Error("文件夹存在，但 Windows 资源管理器未能打开它。请重试一次。");
+      await openDirectoryNative(folderPath);
+      return { ok: true, path: path.normalize(folderPath) };
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new Error(`无法打开文件夹：${detail}`);
     }
   });
 }
