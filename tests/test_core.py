@@ -28,18 +28,26 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(len(values), 3)
         self.assertEqual(values[-1], date(2026, 10, 3))
 
-    def test_remove_existing_date_only_blanks_calibrated_region(self):
+    def test_remove_existing_date_preserves_neighboring_text(self):
         with tempfile.TemporaryDirectory() as tmp:
             src = Path(tmp) / "dated.png"
-            img = Image.new("RGB", (1000, 500), "white")
+            img = Image.new("RGB", (1000, 500), (252, 252, 252))
             draw = ImageDraw.Draw(img)
-            draw.rectangle((140, 245, 300, 255), fill="black")
-            draw.rectangle((600, 245, 650, 255), fill="black")
+
+            # Date ink inside the calibrated erase region.
+            draw.rectangle((150, 245, 295, 255), fill="black")
+            # "保质期" stand-in just to the right of the erase region.
+            draw.rectangle((315, 245, 360, 255), fill="black")
             img.save(src)
 
             blank = remove_existing_date(src)
+
+            # Date ink is removed.
             self.assertEqual(blank.getpixel((200, 250)), (255, 255, 255))
-            self.assertEqual(blank.getpixel((625, 250)), (0, 0, 0))
+            # Neighboring text remains untouched.
+            self.assertEqual(blank.getpixel((330, 250)), (0, 0, 0))
+            # Light background outside dark ink is not replaced by a solid block.
+            self.assertEqual(blank.getpixel((200, 240)), (252, 252, 252))
 
     def test_prepare_templates_from_dated_folder(self):
         with tempfile.TemporaryDirectory() as tmp:
