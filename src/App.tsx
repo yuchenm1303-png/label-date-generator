@@ -14,14 +14,23 @@ import { PreviewPanel } from "./components/PreviewPanel";
 import { RangeControl } from "./components/RangeControl";
 import type { GenerationProgress, GenerationResult, TemplateItem } from "./types";
 
-const DEFAULTS = { xRatio: 13.2, yRatio: 49.2, fontRatio: 4.3 };
-const LEGACY_DEFAULTS = { xRatio: 28.5, yRatio: 52, fontRatio: 3.5 };
+const DEFAULTS = { xRatio: 15, yRatio: 50, fontRatio: 4.1 };
+const LEGACY_PRESETS = [
+  { xRatio: 28.5, yRatio: 52, fontRatio: 3.5 },
+  { xRatio: 13.2, yRatio: 49.2, fontRatio: 4.3 },
+];
 
 function localDateValue(value = new Date()) {
   const year = value.getFullYear();
   const month = String(value.getMonth() + 1).padStart(2, "0");
   const day = String(value.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function addDaysValue(value: string, days: number) {
+  const current = new Date(`${value}T00:00:00`);
+  current.setDate(current.getDate() + days);
+  return localDateValue(current);
 }
 
 function prettyDate(value: string) {
@@ -54,34 +63,64 @@ export default function App() {
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [generating, setGenerating] = useState(false);
   const [preparing, setPreparing] = useState(false);
+  const [settingsReady, setSettingsReady] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("date-generator:settings");
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored);
-      const isLegacyDefault =
-        parsed.xRatio === LEGACY_DEFAULTS.xRatio &&
-        parsed.yRatio === LEGACY_DEFAULTS.yRatio &&
-        parsed.fontRatio === LEGACY_DEFAULTS.fontRatio;
-      if (isLegacyDefault) {
-        setXRatio(DEFAULTS.xRatio);
-        setYRatio(DEFAULTS.yRatio);
-        setFontRatio(DEFAULTS.fontRatio);
-      } else {
-        if (Number.isFinite(parsed.xRatio)) setXRatio(parsed.xRatio);
-        if (Number.isFinite(parsed.yRatio)) setYRatio(parsed.yRatio);
-        if (Number.isFinite(parsed.fontRatio)) setFontRatio(parsed.fontRatio);
+    let cancelled = false;
+
+    async function restoreSettings() {
+      const stored = window.localStorage.getItem("date-generator:settings");
+      if (!stored) {
+        if (!cancelled) setSettingsReady(true);
+        return;
       }
-    } catch {
-      // Keep defaults when an older local value is malformed.
+
+      try {
+        const parsed = JSON.parse(stored);
+        const isLegacyPreset = LEGACY_PRESETS.some((preset) =>
+          parsed.xRatio === preset.xRatio &&
+          parsed.yRatio === preset.yRatio &&
+          parsed.fontRatio === preset.fontRatio
+        );
+
+        if (!isLegacyPreset) {
+          if (Number.isFinite(parsed.xRatio)) setXRatio(parsed.xRatio);
+          if (Number.isFinite(parsed.yRatio)) setYRatio(parsed.yRatio);
+          if (Number.isFinite(parsed.fontRatio)) setFontRatio(parsed.fontRatio);
+        }
+
+        if (parsed.mode === "single" || parsed.mode === "range") setMode(parsed.mode);
+        if (typeof parsed.outputDir === "string") setOutputDir(parsed.outputDir);
+
+        if (typeof parsed.templateDir === "string" && parsed.templateDir && window.dateApp) {
+          const restored = await window.dateApp.scanTemplates(parsed.templateDir);
+          if (!cancelled && restored?.templates?.length) {
+            setTemplateDir(restored.dir);
+            setTemplates(restored.templates);
+            setSelectedIndex(0);
+          }
+        }
+      } catch {
+        // Keep safe defaults when an older local value is malformed.
+      } finally {
+        if (!cancelled) setSettingsReady(true);
+      }
     }
+
+    void restoreSettings();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem("date-generator:settings", JSON.stringify({ xRatio, yRatio, fontRatio }));
-  }, [xRatio, yRatio, fontRatio]);
+    if (!settingsReady) return;
+    window.localStorage.setItem(
+      "date-generator:settings",
+      JSON.stringify({ xRatio, yRatio, fontRatio, templateDir, outputDir, mode }),
+    );
+  }, [settingsReady, xRatio, yRatio, fontRatio, templateDir, outputDir, mode]);
 
   useEffect(() => {
     if (!window.dateApp) {
@@ -117,9 +156,10 @@ export default function App() {
 
   const summary = useMemo(() => {
     if (!templates.length) return "先选择模板文件夹";
-    if (!outputDir) return `已识别 ${templates.length} 个模板 · 请选择输出位置`;
-    if (mode === "range") return `${templates.length} 个模板 × ${dateCount} 天 · 将生成 ${totalImages} 张图片`;
-    return `${templates.length} 个模板 · ${prettyDate(startDate)} · 将生成 ${templates.length} 张图片`;
+    const countLabel = templates.length === 32 ? "32 个模板已就绪" : `已识别 ${templates.length} 个模板（常规应为 32）`;
+    if (!outputDir) return `${countLabel} · 请选择输出位置`;
+    if (mode === "range") return `${countLabel} × ${dateCount} 天 · 将生成 ${totalImages} 张图片`;
+    return `${countLabel} · ${prettyDate(startDate)} · 将生成 ${templates.length} 张图片`;
   }, [templates.length, outputDir, mode, dateCount, totalImages, startDate]);
 
   async function chooseTemplates() {
@@ -177,6 +217,19 @@ export default function App() {
     setXRatio(DEFAULTS.xRatio);
     setYRatio(DEFAULTS.yRatio);
     setFontRatio(DEFAULTS.fontRatio);
+  }
+
+  function useQuickDate(offset: number) {
+    const value = addDaysValue(today, offset);
+    setMode("single");
+    setStartDate(value);
+    setEndDate(value);
+  }
+
+  function useNextSevenDays() {
+    setMode("range");
+    setStartDate(today);
+    setEndDate(addDaysValue(today, 6));
   }
 
   async function generate() {
@@ -277,9 +330,12 @@ export default function App() {
                   <input type="date" min={startDate} value={endDate} onChange={(event) => setEndDate(event.target.value)} />
                 </label>
               ) : null}
-              <button className="today-button" type="button" onClick={() => { setStartDate(today); setEndDate(today); }}>
-                今天
-              </button>
+            </div>
+            <div className="quick-date-row">
+              <button className="quick-date-button" type="button" onClick={() => useQuickDate(0)}>今天</button>
+              <button className="quick-date-button" type="button" onClick={() => useQuickDate(1)}>明天</button>
+              <button className="quick-date-button" type="button" onClick={() => useQuickDate(2)}>后天</button>
+              <button className="quick-date-button" type="button" onClick={useNextSevenDays}>未来 7 天</button>
             </div>
             {mode === "range" ? <div className="date-note">将连续生成 {dateCount || 0} 天，每天包含全部 {templates.length || 0} 个模板。</div> : null}
           </div>
