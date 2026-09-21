@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell, Notification } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell, Notification, nativeImage } from "electron";
 import { execFile, spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -11,6 +11,95 @@ const TASK_DAILY = "配料表日期生成器-每日自动生成";
 const TASK_LOGON = "配料表日期生成器-开机补生成";
 const templateAnalysisCache = new Map();
 
+
+function dominantAlphaSquare(image, alphaThreshold = 12, safeMargin = 0.07) {
+  if (!image || image.isEmpty()) return image;
+
+  const { width, height } = image.getSize();
+  const bitmap = image.toBitmap();
+  const pixelCount = width * height;
+  if (!width || !height || bitmap.length < pixelCount * 4) return image;
+
+  const visited = new Uint8Array(pixelCount);
+  let best = null;
+  const stack = [];
+
+  const isOpaque = (index) => bitmap[index * 4 + 3] > alphaThreshold;
+
+  for (let start = 0; start < pixelCount; start += 1) {
+    if (visited[start] || !isOpaque(start)) continue;
+
+    visited[start] = 1;
+    stack.length = 0;
+    stack.push(start);
+
+    let count = 0;
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+
+    while (stack.length) {
+      const index = stack.pop();
+      const x = index % width;
+      const y = Math.floor(index / width);
+
+      count += 1;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+
+      for (let dy = -1; dy <= 1; dy += 1) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= height) continue;
+        for (let dx = -1; dx <= 1; dx += 1) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          if (nx < 0 || nx >= width) continue;
+          const next = ny * width + nx;
+          if (visited[next] || !isOpaque(next)) continue;
+          visited[next] = 1;
+          stack.push(next);
+        }
+      }
+    }
+
+    if (!best || count > best.count) {
+      best = { count, minX, minY, maxX, maxY };
+    }
+  }
+
+  if (!best || best.count < 8) return image;
+
+  const contentWidth = best.maxX - best.minX + 1;
+  const contentHeight = best.maxY - best.minY + 1;
+  const maxContent = Math.max(contentWidth, contentHeight);
+  const side = Math.min(
+    width,
+    height,
+    Math.max(1, Math.ceil(maxContent * (1 + safeMargin * 2))),
+  );
+
+  const centerX = (best.minX + best.maxX + 1) / 2;
+  const centerY = (best.minY + best.maxY + 1) / 2;
+  const x = Math.max(0, Math.min(width - side, Math.round(centerX - side / 2)));
+  const y = Math.max(0, Math.min(height - side, Math.round(centerY - side / 2)));
+
+  return image.crop({ x, y, width: side, height: side });
+}
+
+function appIconPath() {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, "feather-quill.png")
+    : path.join(ROOT, "build", "icon.png");
+}
+
+function createWindowIcon() {
+  const source = nativeImage.createFromPath(appIconPath());
+  return dominantAlphaSquare(source);
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1320,
@@ -19,9 +108,7 @@ function createWindow() {
     minHeight: 700,
     backgroundColor: "#f6f7fb",
     title: "配料表日期生成器",
-    icon: app.isPackaged
-      ? path.join(process.resourcesPath, "feather-quill.png")
-      : path.join(ROOT, "build", "icon.png"),
+    icon: createWindowIcon(),
     titleBarStyle: "hidden",
     titleBarOverlay: {
       color: "#ffffff",
