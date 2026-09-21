@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, MouseEvent } from "react";
-import type { FontFamily, TemplateAnalysis, TemplateItem } from "../types";
+import type { TemplateAnalysis, TemplateItem } from "../types";
 
 type ViewMode = "single" | "grid";
 
@@ -21,15 +21,10 @@ type Props = {
   selectedTemplateNames: string[];
   viewMode: ViewMode;
   previewData: string;
-  dateLabel: string;
   xRatio: number;
   yRatio: number;
-  fontRatio: number;
   adaptivePosition: boolean;
   analysis: TemplateAnalysis | null;
-  fontFamily: FontFamily;
-  bold: boolean;
-  letterSpacing: number;
   onPrevious: () => void;
   onNext: () => void;
   onPickPosition: (x: number, y: number) => void;
@@ -42,27 +37,16 @@ type Props = {
   onInvertSelection: () => void;
 };
 
-const FONT_STACKS: Record<FontFamily, string> = {
-  simhei: 'SimHei, "Microsoft YaHei", sans-serif',
-  msyh: '"Microsoft YaHei", "PingFang SC", sans-serif',
-  simsun: 'SimSun, "Songti SC", serif',
-};
-
 export function PreviewPanel({
   templates,
   selectedIndex,
   selectedTemplateNames,
   viewMode,
   previewData,
-  dateLabel,
   xRatio,
   yRatio,
-  fontRatio,
   adaptivePosition,
   analysis,
-  fontFamily,
-  bold,
-  letterSpacing,
   onPrevious,
   onNext,
   onPickPosition,
@@ -121,10 +105,6 @@ export function PreviewPanel({
     : { left: 0, top: 0, right: 1, bottom: 1 };
   const boxWidth = Math.max(0.001, box.right - box.left);
   const boxHeight = Math.max(0.001, box.bottom - box.top);
-
-  const overlayLeft = (box.left + boxWidth * (xRatio / 100)) * 100;
-  const overlayTop = (box.top + boxHeight * (yRatio / 100)) * 100;
-  const overlayFontSize = fontRatio * boxHeight;
 
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
     if (!previewData) return;
@@ -252,19 +232,6 @@ export function PreviewPanel({
               <div className="document-sheet" onClick={handleClick} title="点击图片可直接设置日期位置">
                 <img src={previewData} alt={current?.name || "模板预览"} />
                 {adaptivePosition && analysis ? <span className="adaptive-guide" style={guideStyle} /> : null}
-                <span
-                  className="date-overlay"
-                  style={{
-                    left: `${overlayLeft}%`,
-                    top: `${overlayTop}%`,
-                    fontSize: `${overlayFontSize}cqh`,
-                    fontFamily: FONT_STACKS[fontFamily],
-                    fontWeight: bold ? 700 : 400,
-                    letterSpacing: `${letterSpacing / 100}em`,
-                  }}
-                >
-                  {dateLabel}
-                </span>
               </div>
             </div>
           ) : (
@@ -294,7 +261,7 @@ export function PreviewPanel({
               {viewMode === "grid"
                 ? "勾选需要导出的模板；单击设为当前，双击进入精细预览"
                 : adaptivePosition && analysis
-                  ? `已按标签区域自适应 · 识别置信度 ${Math.round(analysis.confidence * 100)}%`
+                  ? `真实导出预览 · 标签识别置信度 ${Math.round(analysis.confidence * 100)}%`
                   : "点击图片任意位置，可直接重新定位日期"}
             </small>
           ) : (
