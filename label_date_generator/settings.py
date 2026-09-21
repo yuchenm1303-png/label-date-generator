@@ -14,10 +14,10 @@ APP_DIR_NAME = "LabelDateGenerator"
 class AppSettings:
     template_dir: str = ""
     output_dir: str = ""
-    x_ratio: float = 0.285
-    y_ratio: float = 0.520
-    font_size_ratio: float = 0.035
-    bold: bool = False
+    x_ratio: float = 0.132
+    y_ratio: float = 0.492
+    font_size_ratio: float = 0.043
+    bold: bool = True
 
     def render(self) -> RenderSettings:
         return RenderSettings(
