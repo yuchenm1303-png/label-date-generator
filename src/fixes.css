@@ -1289,180 +1289,105 @@ select {
 }
 
 
-/* Feather brand system ---------------------------------------------------- */
-/* The quill itself is the mark: no surrounding purple tile or square frame. */
-.brand-mark {
-  width: 48px;
-  height: 48px;
-  flex: none;
-  display: grid;
+/* Reusable raster/vector asset icon renderer ----------------------------- */
+/* Custom image icons must never inherit the rounded/cropped treatment used
+   by button badges. They render on an unconstrained square stage and the
+   artwork itself is always fit with contain. */
+.media-icon {
+  --media-icon-size: 48px;
+  width: var(--media-icon-size);
+  height: var(--media-icon-size);
+  min-width: var(--media-icon-size);
+  min-height: var(--media-icon-size);
+  flex: 0 0 var(--media-icon-size);
+  display: inline-grid;
   place-items: center;
-  overflow: visible;
-  border: 0;
-  border-radius: 0;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.brand-mark-image {
-  display: block;
-  width: 46px;
-  height: 46px;
-  object-fit: contain;
-  object-position: center;
-  filter:
-    drop-shadow(0 7px 10px rgba(82, 61, 177, .15))
-    drop-shadow(0 1px 1px rgba(255, 255, 255, .7));
-  transform: rotate(-2deg);
-  transform-origin: 50% 55%;
-  transition:
-    transform 220ms cubic-bezier(.2, .82, .2, 1),
-    filter 220ms ease;
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
-.brand:hover .brand-mark-image {
-  transform: rotate(1deg) translateY(-1px) scale(1.035);
-  filter:
-    drop-shadow(0 9px 13px rgba(82, 61, 177, .19))
-    drop-shadow(0 1px 1px rgba(255, 255, 255, .78));
-}
-
-.brand-empty-icon {
-  width: 70px;
-  height: 70px;
-  margin-bottom: 12px;
+  position: relative;
+  padding: 0;
+  margin: 0;
+  overflow: visible !important;
+  contain: none !important;
   border: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
+  clip-path: none !important;
+  -webkit-mask: none !important;
+  mask: none !important;
+  line-height: 0;
 }
 
-.brand-empty-icon img {
+.media-icon::before,
+.media-icon::after {
+  content: none !important;
+  display: none !important;
+}
+
+.media-icon-image {
   display: block;
-  width: 66px;
-  height: 66px;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: visible !important;
   object-fit: contain;
-  filter: drop-shadow(0 10px 16px rgba(82, 61, 177, .16));
+  object-position: 50% 50%;
+  border: 0;
+  border-radius: 0 !important;
+  background: transparent;
+  clip-path: none !important;
+  -webkit-mask: none !important;
+  mask: none !important;
   user-select: none;
   -webkit-user-drag: none;
+  transform: none;
+}
+
+/* Brand uses the generic renderer; these rules only tune size/optical
+   contrast, never crop or recolor the source artwork. */
+.media-icon.brand-mark {
+  overflow: visible !important;
+}
+
+.media-icon.brand-mark .media-icon-image {
+  filter:
+    drop-shadow(0 0 1px rgba(84, 62, 176, .48))
+    drop-shadow(0 5px 9px rgba(82, 61, 177, .15));
+  transition:
+    transform 190ms cubic-bezier(.2,.82,.2,1),
+    filter 190ms ease;
+}
+
+.brand:hover .media-icon.brand-mark .media-icon-image {
+  transform: translateY(-1px) scale(1.025);
+  filter:
+    drop-shadow(0 0 1px rgba(84, 62, 176, .52))
+    drop-shadow(0 7px 11px rgba(82, 61, 177, .18));
+}
+
+.media-icon.brand-empty-icon {
+  margin: 0 auto 12px;
+  overflow: visible !important;
+}
+
+.media-icon.brand-empty-icon .media-icon-image {
+  filter:
+    drop-shadow(0 0 1px rgba(84, 62, 176, .38))
+    drop-shadow(0 8px 13px rgba(82, 61, 177, .15));
   animation: feather-idle 5.5s ease-in-out infinite;
 }
 
 @keyframes feather-idle {
-  0%, 100% { transform: translateY(0) rotate(-2deg); }
-  50% { transform: translateY(-3px) rotate(1deg); }
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .brand-mark-image,
-  .brand-empty-icon img {
-    transition-duration: 0.001ms !important;
-    animation: none !important;
-  }
-}
-
-
-/* Feather small-size rendering fix --------------------------------------- */
-/* The source artwork contains near-white feather sections. On the white app
-   chrome those sections visually disappeared after raster downscaling, which
-   made the quill look cropped. For small UI marks, reuse the exact artwork's
-   alpha silhouette as a CSS mask and paint it with the brand gradient. This
-   keeps the complete feather/nib silhouette visible without adding a tile. */
-.brand-mark {
-  position: relative;
-  width: 50px;
-  height: 50px;
-  overflow: visible;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.brand-mark::before {
-  content: "";
-  position: absolute;
-  inset: 5px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(116, 91, 221, .12) 0%,
-    rgba(116, 91, 221, .055) 44%,
-    rgba(116, 91, 221, 0) 72%
-  );
-  filter: blur(5px);
-  pointer-events: none;
-}
-
-.brand-mark-image {
-  position: relative;
-  z-index: 1;
-  display: block;
-  width: 44px;
-  height: 44px;
-  background: linear-gradient(145deg, #a88cff 3%, #7c61df 46%, #5b43bf 100%);
-  -webkit-mask: url("./feather-quill.png") center / contain no-repeat;
-  mask: url("./feather-quill.png") center / contain no-repeat;
-  filter:
-    drop-shadow(0 4px 5px rgba(82, 61, 177, .20))
-    drop-shadow(0 1px 1px rgba(75, 54, 159, .12));
-  transform: none;
-  opacity: 1;
-  transition:
-    transform 200ms cubic-bezier(.2,.82,.2,1),
-    filter 200ms ease;
-}
-
-.brand:hover .brand-mark-image {
-  transform: translateY(-1px) scale(1.035);
-  filter:
-    drop-shadow(0 6px 7px rgba(82, 61, 177, .23))
-    drop-shadow(0 1px 1px rgba(75, 54, 159, .14));
-}
-
-.brand-empty-icon {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 72px;
-  overflow: visible;
-  border: 0 !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.brand-empty-icon::before {
-  content: "";
-  position: absolute;
-  inset: 7px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(116, 91, 221, .11) 0%,
-    rgba(116, 91, 221, .045) 48%,
-    transparent 74%
-  );
-  filter: blur(7px);
-}
-
-.brand-empty-mark {
-  position: relative;
-  z-index: 1;
-  display: block;
-  width: 64px;
-  height: 64px;
-  background: linear-gradient(145deg, #ad93ff 2%, #8167e3 48%, #6048c4 100%);
-  -webkit-mask: url("./feather-quill.png") center / contain no-repeat;
-  mask: url("./feather-quill.png") center / contain no-repeat;
-  filter: drop-shadow(0 8px 10px rgba(82, 61, 177, .18));
-  animation: feather-idle 5.5s ease-in-out infinite;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .brand-mark-image,
-  .brand-empty-mark {
+  .media-icon-image {
     transition-duration: 0.001ms !important;
     animation: none !important;
   }
