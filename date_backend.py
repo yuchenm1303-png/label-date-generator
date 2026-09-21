@@ -172,20 +172,46 @@ def generate(payload: dict) -> None:
     font_ratio = float(payload.get("fontRatio", 4.1)) / 100
     total = len(templates) * len(values)
     done = 0
+    created = 0
+    skipped = 0
+    skip_existing = bool(payload.get("skipExisting", False))
 
     for current_date in values:
         target = output_dir / folder_name(current_date)
         target.mkdir(parents=True, exist_ok=True)
         for src in templates:
-            img = render_date(src, current_date, x_ratio, y_ratio, font_ratio)
             # Critical rule: output filename remains exactly the product/template
             # filename. Do not append dates, counters or other suffixes.
             dst = target / product_output_name(src)
+
+            if skip_existing and dst.exists():
+                skipped += 1
+                done += 1
+                emit(
+                    "progress",
+                    done=done,
+                    total=total,
+                    file=src.name,
+                    date=current_date.isoformat(),
+                    skipped=True,
+                )
+                continue
+
+            img = render_date(src, current_date, x_ratio, y_ratio, font_ratio)
             save_image(img, dst)
+            created += 1
             done += 1
             emit("progress", done=done, total=total, file=src.name, date=current_date.isoformat())
 
-    emit("done", done=done, total=total, dates=len(values), outputDir=str(output_dir))
+    emit(
+        "done",
+        done=done,
+        total=total,
+        created=created,
+        skipped=skipped,
+        dates=len(values),
+        outputDir=str(output_dir),
+    )
 
 
 def main() -> None:
