@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ImageIcon, MousePointer2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FolderOpen, ImageIcon, MousePointer2 } from "lucide-react";
 import type { MouseEvent } from "react";
 import type { TemplateItem } from "../types";
 
@@ -13,6 +13,7 @@ type Props = {
   onPrevious: () => void;
   onNext: () => void;
   onPickPosition: (x: number, y: number) => void;
+  onChooseTemplates: () => void;
 };
 
 export function PreviewPanel({
@@ -26,6 +27,7 @@ export function PreviewPanel({
   onPrevious,
   onNext,
   onPickPosition,
+  onChooseTemplates,
 }: Props) {
   const hasTemplates = templates.length > 0;
   const current = templates[selectedIndex];
@@ -47,16 +49,16 @@ export function PreviewPanel({
         </div>
         <div className="preview-nav">
           <button type="button" onClick={onPrevious} disabled={!hasTemplates || templates.length < 2} aria-label="上一张模板">
-            <ChevronLeft size={17} />
+            <ChevronLeft size={18} />
           </button>
           <span>{hasTemplates ? `${selectedIndex + 1} / ${templates.length}` : "0 / 0"}</span>
           <button type="button" onClick={onNext} disabled={!hasTemplates || templates.length < 2} aria-label="下一张模板">
-            <ChevronRight size={17} />
+            <ChevronRight size={18} />
           </button>
         </div>
       </header>
 
-      <div className="preview-canvas">
+      <div className={`preview-canvas ${previewData ? "has-document" : "is-empty"}`}>
         {previewData ? (
           <div className="document-shell">
             <div className="document-sheet" onClick={handleClick} title="点击图片可直接设置日期位置">
@@ -71,19 +73,24 @@ export function PreviewPanel({
           </div>
         ) : (
           <div className="preview-empty">
-            <div className="empty-icon"><ImageIcon size={25} /></div>
-            <h3>选择模板文件夹后即可预览</h3>
-            <p>支持 PNG、JPG、JPEG、BMP 与 WEBP 图片。</p>
+            <div className="empty-icon"><ImageIcon size={28} /></div>
+            <h3>先选一组配料表模板</h3>
+            <p>选择包含 32 张无日期模板的文件夹，右侧会立即显示真实效果。</p>
+            <button className="preview-empty-action" type="button" onClick={onChooseTemplates}>
+              <FolderOpen size={16} />
+              选择模板文件夹
+            </button>
+            <small>PNG · JPG · JPEG · BMP · WEBP</small>
           </div>
         )}
       </div>
 
       <footer className="preview-footer">
         <div className="preview-file">
-          <span>{current?.name || "暂无模板"}</span>
-          {hasTemplates ? <small>点击图片即可重新定位日期</small> : <small>预览会自动适配窗口大小</small>}
+          <span>{current?.name || "等待选择模板"}</span>
+          {hasTemplates ? <small>点击图片任意位置，可直接重新定位日期</small> : <small>预览区域会自动适配不同尺寸的配料表</small>}
         </div>
-        <div className="click-hint"><MousePointer2 size={14} /> 点击定位</div>
+        <div className={`click-hint ${hasTemplates ? "" : "is-muted"}`}><MousePointer2 size={14} /> 点击定位</div>
       </footer>
     </section>
   );
