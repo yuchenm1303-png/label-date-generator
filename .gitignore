@@ -2,10 +2,13 @@ __pycache__/
 *.py[cod]
 .venv/
 venv/
+node_modules/
 dist/
+release/
 build/
 *.spec
 output/
 templates/
 .DS_Store
 Thumbs.db
+npm-debug.log*
