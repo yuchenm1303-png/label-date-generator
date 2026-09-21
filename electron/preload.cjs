@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("dateApp", {
+  scanTemplates: (dir) => ipcRenderer.invoke("templates:scan", dir),
   chooseTemplates: () => ipcRenderer.invoke("templates:choose"),
   prepareTemplates: () => ipcRenderer.invoke("templates:prepare"),
   chooseOutput: () => ipcRenderer.invoke("output:choose"),
