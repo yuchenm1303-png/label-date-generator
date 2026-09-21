@@ -516,8 +516,8 @@ button { color: inherit; }
 .primary-button:active:not(:disabled) { transform: translateY(0) scale(.985); }
 .primary-button:disabled { opacity: .38; cursor: default; box-shadow: none; }
 
-.toast-error { position: fixed; z-index: 200; right: 22px; bottom: 96px; max-width: 430px; padding: 11px 12px; border: 1px solid rgba(194,83,96,.17); border-radius: 11px; display: flex; align-items: center; gap: 12px; color: #9d4b55; background: rgba(255,246,247,.98); box-shadow: 0 12px 32px rgba(66,35,39,.12); font-size: 9.5px; }
-.toast-error span { flex: 1; }
+.toast-error { position: fixed; z-index: 200; right: 22px; bottom: 96px; width: min(430px, calc(100vw - 44px)); max-height: 150px; overflow: auto; padding: 11px 12px; border: 1px solid rgba(194,83,96,.17); border-radius: 11px; display: flex; align-items: flex-start; gap: 12px; color: #9d4b55; background: rgba(255,246,247,.98); box-shadow: 0 12px 32px rgba(66,35,39,.12); font-size: 9.5px; }
+.toast-error span { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.5; }
 .toast-error button { width: 22px; height: 22px; border: 0; border-radius: 7px; color: #a45d66; background: transparent; cursor: pointer; }
 .toast-error button:hover { background: rgba(164,93,102,.08); }
 
