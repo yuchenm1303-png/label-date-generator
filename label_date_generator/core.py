@@ -10,7 +10,8 @@ from PIL import Image, ImageDraw, ImageFont
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
 
 # Calibrated from the user's existing self-operated label screenshots.
-DATE_ERASE_BOX = (0.130, 0.475, 0.315, 0.535)
+# Keep a safety gap before the original "保质期:3天" text.
+DATE_ERASE_BOX = (0.1305, 0.477, 0.3070, 0.530)
 
 
 @dataclass(frozen=True)
@@ -100,6 +101,17 @@ def render_date(src: Path, value: date, settings: RenderSettings) -> Image.Image
     return img
 
 
+def _erase_dark_ink(img: Image.Image, box: tuple[int, int, int, int]) -> None:
+    """Erase only dark text pixels, avoiding a visible solid white rectangle."""
+    region = img.crop(box)
+    # Keep light background pixels untouched; whiten the dark text and its
+    # anti-aliased edge pixels inside the tightly calibrated date-only region.
+    mask = region.convert("L").point(lambda p: 255 if p < 250 else 0)
+    white = Image.new("RGB", region.size, (255, 255, 255))
+    region.paste(white, (0, 0), mask)
+    img.paste(region, box[:2])
+
+
 def remove_existing_date(src: Path) -> Image.Image:
     """Create a blank-date template from one dated self-operated label image."""
     with Image.open(src) as opened:
@@ -113,7 +125,7 @@ def remove_existing_date(src: Path) -> Image.Image:
         round(width * right),
         round(height * bottom),
     )
-    ImageDraw.Draw(img).rectangle(box, fill=(255, 255, 255))
+    _erase_dark_ink(img, box)
     return img
 
 
