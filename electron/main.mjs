@@ -9,6 +9,7 @@ const ROOT = path.resolve(__dirname, "..");
 const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".bmp", ".webp"]);
 const TASK_DAILY = "配料表日期生成器-每日自动生成";
 const TASK_LOGON = "配料表日期生成器-开机补生成";
+const templateAnalysisCache = new Map();
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -442,6 +443,7 @@ function registerIpc() {
 
     if (!prepared) throw new Error("模板准备任务没有返回完成结果。");
 
+    templateAnalysisCache.clear();
     const templates = await scanTemplates(destinationDir);
     return {
       dir: destinationDir,
@@ -465,6 +467,9 @@ function registerIpc() {
   });
 
   ipcMain.handle("templates:analyze", async (_event, filePath) => {
+    const cached = templateAnalysisCache.get(filePath);
+    if (cached) return cached;
+
     let analysis = null;
     await runBackend(
       { action: "analyzeTemplate", path: filePath },
@@ -473,6 +478,7 @@ function registerIpc() {
       },
     );
     if (!analysis) throw new Error("模板自适应分析没有返回结果。");
+    templateAnalysisCache.set(filePath, analysis);
     return analysis;
   });
 
