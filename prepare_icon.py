@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 ROOT = Path(__file__).resolve().parent
-SOURCE = ROOT / "build" / "icon.png"
+SOURCE_CANDIDATES = (
+    ROOT / "build" / "icon.png",
+    ROOT / "src" / "assets" / "feather-quill.png",
+    ROOT / "public" / "feather-quill.png",
+)
 NORMALIZED = ROOT / "build" / "icon-normalized.png"
 ICO = ROOT / "build" / "icon.ico"
 
@@ -14,8 +18,28 @@ SAFE_MARGIN_RATIO = 0.07
 ICO_SIZES = (16, 20, 24, 32, 40, 48, 64, 128, 256)
 
 
-def normalize_icon(source: Image.Image) -> Image.Image:
-    image = source.convert("RGBA")
+def load_source_icon() -> tuple[Image.Image, Path]:
+    errors: list[str] = []
+
+    for path in SOURCE_CANDIDATES:
+        if not path.exists():
+            errors.append(f"{path}: missing")
+            continue
+
+        try:
+            with Image.open(path) as image:
+                image.load()
+                return image.convert("RGBA"), path
+        except (UnidentifiedImageError, OSError, ValueError) as exc:
+            errors.append(f"{path}: {exc}")
+
+    detail = "\n".join(errors)
+    raise RuntimeError(
+        "No valid app icon source could be loaded. Checked:\n" + detail
+    )
+
+
+def normalize_icon(image: Image.Image) -> Image.Image:
     alpha = image.getchannel("A")
     mask = alpha.point(lambda value: 255 if value > ALPHA_THRESHOLD else 0)
     bbox = mask.getbbox()
@@ -34,10 +58,8 @@ def normalize_icon(source: Image.Image) -> Image.Image:
 
 
 def main() -> None:
-    if not SOURCE.exists():
-        raise FileNotFoundError(f"Missing icon source: {SOURCE}")
-
-    normalized = normalize_icon(Image.open(SOURCE))
+    source, source_path = load_source_icon()
+    normalized = normalize_icon(source)
     png = normalized.resize((256, 256), Image.Resampling.LANCZOS)
 
     NORMALIZED.parent.mkdir(parents=True, exist_ok=True)
@@ -50,7 +72,10 @@ def main() -> None:
         sizes=[(size, size) for size in ICO_SIZES],
     )
 
-    print(f"Prepared {NORMALIZED.name} and {ICO.name}")
+    print(
+        f"Prepared {NORMALIZED.name} and {ICO.name} "
+        f"from {source_path.relative_to(ROOT)}"
+    )
 
 
 if __name__ == "__main__":
