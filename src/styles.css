@@ -153,8 +153,8 @@ button { color: inherit; }
 .segmented-control button { height: 26px; padding: 0 10px; border: 0; border-radius: 7px; color: #858c99; background: transparent; cursor: pointer; font-size: 9px; font-weight: 650; }
 .segmented-control button.active { color: #4d426f; background: white; box-shadow: 0 2px 7px rgba(31,35,48,.09); }
 
-.date-grid { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; align-items: end; }
-.date-grid.two-columns { grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto; }
+.date-grid { display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; align-items: end; }
+.date-grid.two-columns { grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
 .date-field { display: grid; gap: 5px; }
 .date-field > span { color: #717887; font-size: 9px; font-weight: 620; }
 .date-field input {
@@ -172,6 +172,9 @@ button { color: inherit; }
 .date-field input:focus { border-color: #bfb7e7; background: white; box-shadow: 0 0 0 3px rgba(109,91,208,.08); }
 .today-button { height: 38px; padding: 0 12px; border: 1px solid #e0e3e9; border-radius: 10px; color: #6558b5; background: #f8f6ff; font-size: 9px; font-weight: 680; }
 .today-button:hover { background: #f0edff; }
+.quick-date-row { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 6px; margin-top: 9px; }
+.quick-date-button { height: 30px; border: 1px solid #e0e3e9; border-radius: 9px; color: #7064b8; background: #faf9ff; cursor: pointer; font-size: 8.5px; font-weight: 680; transition: background 150ms ease, border-color 150ms ease, transform 150ms var(--ease); }
+.quick-date-button:hover { border-color: #d3cdee; background: #f3f0ff; transform: translateY(-1px); }
 .date-note, .position-tip { margin-top: 10px; padding: 8px 10px; border-radius: 9px; color: #817a95; background: #f8f6fc; font-size: 9px; line-height: 1.45; }
 
 .controls-card { padding-bottom: 14px; }
@@ -280,5 +283,5 @@ button { color: inherit; }
 @media (max-width: 1120px) {
   .workspace { grid-template-columns: minmax(350px, 400px) minmax(0,1fr); gap: 14px; padding-inline: 16px; }
   .date-grid.two-columns { grid-template-columns: 1fr 1fr; }
-  .date-grid.two-columns .today-button { grid-column: 1 / -1; height: 32px; }
+  .quick-date-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
