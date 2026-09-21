@@ -96,6 +96,7 @@ export default function App() {
   const [letterSpacing, setLetterSpacing] = useState(DEFAULTS.letterSpacing);
   const [presets, setPresets] = useState<ParameterPreset[]>([]);
   const [selectedPresetId, setSelectedPresetId] = useState("");
+  const [presetName, setPresetName] = useState("");
   const [progress, setProgress] = useState<GenerationProgress | null>(null);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -362,7 +363,11 @@ export default function App() {
   function applyPreset(id: string) {
     setSelectedPresetId(id);
     const preset = presets.find((item) => item.id === id);
-    if (!preset) return;
+    if (!preset) {
+      setPresetName("");
+      return;
+    }
+    setPresetName(preset.name);
     setXRatio(preset.xRatio);
     setYRatio(preset.yRatio);
     setFontRatio(preset.fontRatio);
@@ -373,12 +378,15 @@ export default function App() {
   }
 
   function savePreset() {
-    const name = window.prompt("给这组参数起一个名字", "自营标准");
-    if (!name?.trim()) return;
+    const name = presetName.trim();
+    if (!name) {
+      setError("请先输入参数方案名称，例如“自营标准”。");
+      return;
+    }
 
     const preset: ParameterPreset = {
       id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
-      name: name.trim(),
+      name,
       xRatio,
       yRatio,
       fontRatio,
@@ -390,12 +398,14 @@ export default function App() {
 
     setPresets((items) => [preset, ...items.filter((item) => item.name !== preset.name)].slice(0, 12));
     setSelectedPresetId(preset.id);
+    setError("");
   }
 
   function deletePreset() {
     if (!selectedPresetId) return;
     setPresets((items) => items.filter((item) => item.id !== selectedPresetId));
     setSelectedPresetId("");
+    setPresetName("");
   }
 
   async function refreshHistory() {
@@ -630,10 +640,17 @@ export default function App() {
 
             <div className="preset-row">
               <select value={selectedPresetId} onChange={(event) => applyPreset(event.target.value)}>
-                <option value="">参数方案</option>
+                <option value="">读取已保存方案</option>
                 {presets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}
               </select>
-              <button className="preset-save" type="button" onClick={savePreset}><Save size={13} /> 保存方案</button>
+              <input
+                className="preset-name-input"
+                value={presetName}
+                maxLength={20}
+                placeholder="方案名称，如：自营标准"
+                onChange={(event) => setPresetName(event.target.value)}
+              />
+              <button className="preset-save" type="button" onClick={savePreset}><Save size={13} /> 保存</button>
               {selectedPresetId ? (
                 <button className="preset-delete" type="button" onClick={deletePreset} aria-label="删除当前参数方案"><Trash2 size={13} /></button>
               ) : null}
