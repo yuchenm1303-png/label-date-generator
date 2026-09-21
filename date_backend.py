@@ -345,8 +345,13 @@ def generate(payload: dict) -> None:
         raise ValueError("请选择输出位置")
 
     templates = list_images(template_dir)
+    requested_names = payload.get("templateNames")
+    if isinstance(requested_names, list):
+        requested = {str(name) for name in requested_names if str(name)}
+        templates = [src for src in templates if src.name in requested]
+
     if not templates:
-        raise ValueError("模板文件夹中没有可用图片")
+        raise ValueError("没有可生成的模板，请检查当前/多选范围")
 
     values = dates_from_request(payload)
     x_ratio = float(payload.get("xRatio", 15.1)) / 100
