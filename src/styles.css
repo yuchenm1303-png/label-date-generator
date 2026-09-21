@@ -18,7 +18,7 @@
 * { box-sizing: border-box; }
 html, body, #root { width: 100%; height: 100%; margin: 0; }
 body { overflow: hidden; background: #f6f7fb; }
-button, input { font: inherit; }
+button, input, select { font: inherit; }
 button { color: inherit; }
 
 .app-shell {
@@ -224,6 +224,78 @@ button { color: inherit; }
 .range-input { --range-value: 30%; width: 100%; height: 18px; margin: 5px 0 0; appearance: none; background: transparent; cursor: pointer; }
 .range-input::-webkit-slider-runnable-track { height: 4px; border-radius: 99px; background: linear-gradient(90deg, #7968d8 var(--range-value), #e8eaf0 var(--range-value)); }
 .range-input::-webkit-slider-thumb { width: 15px; height: 15px; margin-top: -5.5px; appearance: none; border: 3px solid #fff; border-radius: 50%; background: #6d5bd0; box-shadow: 0 1px 6px rgba(72,57,152,.32); }
+
+
+/* Adaptive positioning + font controls */
+.adaptive-row {
+  margin: -2px 0 14px;
+  padding: 10px 11px;
+  border: 1px solid #e9e7f5;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(135deg, #faf9ff, #f7f8fc);
+}
+.adaptive-copy { min-width: 0; display: flex; align-items: center; gap: 9px; }
+.adaptive-icon { width: 29px; height: 29px; flex: none; border-radius: 8px; display: grid; place-items: center; color: #6d5bd0; background: #efecff; }
+.adaptive-copy > div:last-child { min-width: 0; display: grid; gap: 2px; }
+.adaptive-copy strong { color: #555c69; font-size: 9.5px; font-weight: 700; }
+.adaptive-copy span { color: #969ca8; font-size: 8px; line-height: 1.35; }
+.switch-button { width: 38px; height: 22px; flex: none; padding: 2px; border: 0; border-radius: 999px; background: #dfe2e9; cursor: pointer; transition: background 170ms ease; }
+.switch-button span { display: block; width: 18px; height: 18px; border-radius: 50%; background: white; box-shadow: 0 2px 6px rgba(46,50,62,.18); transform: translateX(0); transition: transform 180ms var(--ease); }
+.switch-button.on { background: #7565d4; }
+.switch-button.on span { transform: translateX(16px); }
+
+.font-divider { height: 1px; margin: 14px 0 11px; background: #edf0f4; }
+.font-heading { display: flex; align-items: center; gap: 6px; margin-bottom: 9px; color: #666d7a; font-size: 9px; font-weight: 700; }
+.font-heading svg { color: #8174c9; }
+.font-grid { display: grid; grid-template-columns: minmax(0,1fr) 96px; gap: 8px; margin-bottom: 10px; }
+.font-select-field, .bold-toggle { display: grid; gap: 5px; }
+.font-select-field > span, .bold-toggle > span { color: #858b98; font-size: 8px; font-weight: 650; }
+.font-select-field select {
+  width: 100%;
+  height: 32px;
+  border: 1px solid #dfe2e9;
+  border-radius: 9px;
+  outline: none;
+  padding: 0 9px;
+  color: #575e6b;
+  background: #fbfbfc;
+  font-size: 9px;
+}
+.font-select-field select:focus { border-color: #bfb7e7; box-shadow: 0 0 0 3px rgba(109,91,208,.07); }
+.bold-toggle button { height: 32px; border: 1px solid #dfe2e9; border-radius: 9px; color: #737987; background: #fbfbfc; cursor: pointer; font-size: 9px; font-weight: 680; }
+.bold-toggle button.active { color: #5c4db5; border-color: #d7d0f1; background: #f3f0ff; }
+
+.preset-row { display: grid; grid-template-columns: minmax(0,1fr) auto auto; gap: 6px; margin-top: 12px; }
+.preset-row select {
+  min-width: 0;
+  height: 31px;
+  border: 1px solid #dfe2e9;
+  border-radius: 9px;
+  outline: none;
+  padding: 0 8px;
+  color: #686f7d;
+  background: #fbfbfc;
+  font-size: 8.5px;
+}
+.preset-save, .preset-delete { height: 31px; border: 0; border-radius: 9px; cursor: pointer; }
+.preset-save { padding: 0 10px; display: inline-flex; align-items: center; gap: 5px; color: #6254b6; background: #f1eeff; font-size: 8.5px; font-weight: 700; }
+.preset-save:hover { background: #e9e4ff; }
+.preset-delete { width: 31px; display: grid; place-items: center; color: #9b7378; background: #f8f1f2; }
+.preset-delete:hover { background: #f3e7e9; }
+
+.adaptive-guide {
+  position: absolute;
+  z-index: 1;
+  border: 1px dashed rgba(109, 91, 208, .32);
+  border-radius: 2px;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.4);
+}
+.date-overlay { z-index: 2; }
 
 .preview-panel {
   min-width: 0;
