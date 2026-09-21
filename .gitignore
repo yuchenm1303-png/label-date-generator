@@ -12,3 +12,7 @@ templates/
 .DS_Store
 Thumbs.db
 npm-debug.log*
+
+backend-dist/
+backend-build/
+backend-spec/
