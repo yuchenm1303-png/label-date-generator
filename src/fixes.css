@@ -1287,3 +1287,78 @@ select {
     overflow-y: auto;
   }
 }
+
+
+/* Feather brand system ---------------------------------------------------- */
+/* The quill itself is the mark: no surrounding purple tile or square frame. */
+.brand-mark {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.brand-mark-image {
+  display: block;
+  width: 46px;
+  height: 46px;
+  object-fit: contain;
+  object-position: center;
+  filter:
+    drop-shadow(0 7px 10px rgba(82, 61, 177, .15))
+    drop-shadow(0 1px 1px rgba(255, 255, 255, .7));
+  transform: rotate(-2deg);
+  transform-origin: 50% 55%;
+  transition:
+    transform 220ms cubic-bezier(.2, .82, .2, 1),
+    filter 220ms ease;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.brand:hover .brand-mark-image {
+  transform: rotate(1deg) translateY(-1px) scale(1.035);
+  filter:
+    drop-shadow(0 9px 13px rgba(82, 61, 177, .19))
+    drop-shadow(0 1px 1px rgba(255, 255, 255, .78));
+}
+
+.brand-empty-icon {
+  width: 70px;
+  height: 70px;
+  margin-bottom: 12px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.brand-empty-icon img {
+  display: block;
+  width: 66px;
+  height: 66px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 16px rgba(82, 61, 177, .16));
+  user-select: none;
+  -webkit-user-drag: none;
+  animation: feather-idle 5.5s ease-in-out infinite;
+}
+
+@keyframes feather-idle {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-3px) rotate(1deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-mark-image,
+  .brand-empty-icon img {
+    transition-duration: 0.001ms !important;
+    animation: none !important;
+  }
+}
