@@ -177,6 +177,38 @@ button { color: inherit; }
 .quick-date-button:hover { border-color: #d3cdee; background: #f3f0ff; transform: translateY(-1px); }
 .date-note, .position-tip { margin-top: 10px; padding: 8px 10px; border-radius: 9px; color: #817a95; background: #f8f6fc; font-size: 9px; line-height: 1.45; }
 
+.automation-card, .history-card { padding-bottom: 14px; }
+.automation-status { padding: 4px 8px; border-radius: 999px; color: #8a7180; background: #f6f1f4; font-size: 8px; font-weight: 720; }
+.automation-status.enabled { color: #3e8d63; background: #eef8f2; }
+.automation-grid { display: grid; grid-template-columns: 112px minmax(0,1fr); gap: 10px; align-items: end; }
+.automation-time, .automation-range { display: grid; gap: 6px; }
+.automation-time > span, .automation-range > span { color: #777e8c; font-size: 8.5px; font-weight: 650; }
+.automation-time input { height: 34px; width: 100%; border: 1px solid #dfe2e9; border-radius: 9px; padding: 0 8px; outline: none; color: #444a57; background: #fbfbfc; font-size: 10px; }
+.automation-time input:focus { border-color: #bfb7e7; box-shadow: 0 0 0 3px rgba(109,91,208,.08); }
+.automation-segment { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 4px; padding: 3px; border-radius: 9px; background: #f1f2f6; }
+.automation-segment button { height: 28px; min-width: 0; border: 0; border-radius: 7px; color: #8a909c; background: transparent; cursor: pointer; font-size: 8px; font-weight: 650; }
+.automation-segment button.active { color: #5448a4; background: #fff; box-shadow: 0 2px 7px rgba(31,35,48,.08); }
+.automation-actions { display: flex; gap: 7px; margin-top: 11px; }
+.automation-primary, .automation-secondary { height: 34px; border: 0; border-radius: 9px; cursor: pointer; font-size: 9px; font-weight: 700; transition: transform 150ms var(--ease), background 150ms ease, opacity 150ms ease; }
+.automation-primary { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; color: white; background: linear-gradient(135deg, #7565d4, #5d4bc0); box-shadow: 0 6px 16px rgba(91,73,192,.18); }
+.automation-secondary { padding: 0 13px; color: #777e8b; background: #f1f2f5; }
+.automation-primary:hover:not(:disabled), .automation-secondary:hover:not(:disabled) { transform: translateY(-1px); }
+.automation-primary:disabled, .automation-secondary:disabled { opacity: .42; cursor: default; }
+.automation-note { margin-top: 9px; padding: 8px 9px; border-radius: 8px; color: #818795; background: #f8f9fb; font-size: 8.3px; line-height: 1.5; }
+
+.history-list { display: grid; gap: 6px; }
+.history-row { min-height: 42px; display: grid; grid-template-columns: 8px minmax(0,1fr) auto 28px; align-items: center; gap: 8px; padding: 7px 8px; border: 1px solid #eceef3; border-radius: 10px; background: #fbfbfc; }
+.history-dot { width: 7px; height: 7px; border-radius: 50%; background: #c08a6a; box-shadow: 0 0 0 3px rgba(192,138,106,.08); }
+.history-dot.complete { background: #54a979; box-shadow: 0 0 0 3px rgba(84,169,121,.09); }
+.history-copy { min-width: 0; display: grid; gap: 2px; }
+.history-copy strong { color: #555c69; font-size: 9px; font-weight: 680; }
+.history-copy span { color: #999faa; font-size: 8px; }
+.history-badge { padding: 3px 6px; border-radius: 999px; color: #a06d52; background: #fbf2ed; font-size: 7.5px; font-weight: 720; white-space: nowrap; }
+.history-badge.complete { color: #43835f; background: #eef8f2; }
+.history-open { width: 27px; height: 27px; border: 0; border-radius: 8px; display: grid; place-items: center; color: #8277bd; background: transparent; cursor: pointer; }
+.history-open:hover { background: #f1eeff; }
+.empty-history { padding: 10px; border-radius: 9px; color: #969ca8; background: #f8f9fb; font-size: 8.5px; line-height: 1.5; text-align: center; }
+
 .controls-card { padding-bottom: 14px; }
 .ghost-button { display: inline-flex; align-items: center; gap: 5px; padding: 5px 7px; border-radius: 7px; color: #858b98; background: transparent; font-size: 8.5px; }
 .ghost-button:hover { color: #6154b5; background: #f5f2ff; }
@@ -284,4 +316,5 @@ button { color: inherit; }
   .workspace { grid-template-columns: minmax(350px, 400px) minmax(0,1fr); gap: 14px; padding-inline: 16px; }
   .date-grid.two-columns { grid-template-columns: 1fr 1fr; }
   .quick-date-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .automation-grid { grid-template-columns: 1fr; }
 }
