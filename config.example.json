@@ -1,0 +1,12 @@
+{
+  "date_position": {
+    "x_ratio": 0.285,
+    "y_ratio": 0.520
+  },
+  "font": {
+    "size_ratio": 0.035,
+    "bold": false
+  },
+  "date_format": "{year}年{month}月{day}日",
+  "folder_format": "{month}月{day}日"
+}
