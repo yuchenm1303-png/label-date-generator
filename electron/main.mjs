@@ -147,6 +147,39 @@ app.whenReady().then(() => {
     };
   });
 
+  ipcMain.handle("templates:prepare", async () => {
+    const result = await dialog.showOpenDialog({
+      title: "选择一个已有日期的历史成品文件夹（例如 10月1日）",
+      properties: ["openDirectory"],
+    });
+    if (result.canceled || !result.filePaths[0]) return null;
+
+    const sourceDir = result.filePaths[0];
+    const destinationDir = path.join(path.dirname(sourceDir), "无日期模板");
+    let prepared = null;
+
+    await runBackend(
+      {
+        action: "prepareTemplates",
+        sourceDir,
+        destinationDir,
+      },
+      (message) => {
+        if (message.type === "prepared") prepared = message;
+      },
+    );
+
+    if (!prepared) throw new Error("模板准备任务没有返回完成结果。");
+
+    const templates = await scanTemplates(destinationDir);
+    return {
+      dir: destinationDir,
+      templates,
+      suggestedOutput: path.join(path.dirname(destinationDir), "自动生成结果"),
+      count: templates.length,
+    };
+  });
+
   ipcMain.handle("output:choose", async () => {
     const result = await dialog.showOpenDialog({
       title: "选择输出位置",
@@ -162,7 +195,7 @@ app.whenReady().then(() => {
 
   ipcMain.handle("generation:run", async (event, payload) => {
     let finalResult = null;
-    await runBackend(payload, (message) => {
+    await runBackend({ action: "generate", ...payload }, (message) => {
       if (message.type === "progress") {
         event.sender.send("generation:progress", message);
       }
