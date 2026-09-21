@@ -272,9 +272,9 @@ def render_preview(payload: dict) -> None:
     img = render_date(
         src,
         value,
-        float(payload.get("xRatio", 13.9)) / 100,
+        float(payload.get("xRatio", 14.3)) / 100,
         float(payload.get("yRatio", 49.9)) / 100,
-        float(payload.get("fontRatio", 1.8)) / 100,
+        float(payload.get("fontRatio", 4.0)) / 100,
         adaptive_position=bool(payload.get("adaptivePosition", True)),
         font_family=str(payload.get("fontFamily", "simhei")),
         bold=bool(payload.get("bold", False)),
