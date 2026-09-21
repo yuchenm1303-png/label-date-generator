@@ -2,17 +2,27 @@ import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   Check,
+  Clock3,
   ExternalLink,
+  History,
   Layers3,
   Play,
   RotateCcw,
+  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { FilePickerCard } from "./components/FilePickerCard";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { RangeControl } from "./components/RangeControl";
-import type { GenerationProgress, GenerationResult, TemplateItem } from "./types";
+import type {
+  AutomationConfig,
+  GenerationHistoryItem,
+  GenerationProgress,
+  GenerationResult,
+  TemplateItem,
+} from "./types";
 
 const DEFAULTS = { xRatio: 15, yRatio: 50, fontRatio: 4.1 };
 const LEGACY_PRESETS = [
@@ -64,6 +74,11 @@ export default function App() {
   const [generating, setGenerating] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const [settingsReady, setSettingsReady] = useState(false);
+  const [history, setHistory] = useState<GenerationHistoryItem[]>([]);
+  const [automationEnabled, setAutomationEnabled] = useState(false);
+  const [automationTime, setAutomationTime] = useState("06:00");
+  const [automationHorizon, setAutomationHorizon] = useState(1);
+  const [automationBusy, setAutomationBusy] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -127,6 +142,16 @@ export default function App() {
       setError("桌面桥接没有加载成功。请关闭当前窗口并重新运行 npm run dev；如果仍然出现，请查看启动终端里的 preload failed 信息。");
       return;
     }
+
+    void window.dateApp.listHistory().then(setHistory).catch(() => undefined);
+    void window.dateApp.getAutomation()
+      .then((config) => {
+        setAutomationEnabled(Boolean(config.enabled));
+        if (config.time) setAutomationTime(config.time);
+        if (Number.isFinite(config.horizonDays)) setAutomationHorizon(config.horizonDays);
+      })
+      .catch(() => undefined);
+
     return window.dateApp.onGenerationProgress(setProgress);
   }, []);
 
@@ -232,6 +257,68 @@ export default function App() {
     setEndDate(addDaysValue(today, 6));
   }
 
+  async function refreshHistory() {
+    if (!window.dateApp) return;
+    try {
+      setHistory(await window.dateApp.listHistory());
+    } catch {
+      // History is a convenience feature; generation itself should keep working.
+    }
+  }
+
+  async function enableAutomation() {
+    if (!window.dateApp) return;
+    if (!templates.length || !templateDir) {
+      setError("请先准备或选择无日期模板。");
+      return;
+    }
+    if (!outputDir) {
+      setError("请先选择输出位置。");
+      return;
+    }
+
+    setAutomationBusy(true);
+    setError("");
+    try {
+      const config: AutomationConfig = {
+        enabled: true,
+        time: automationTime,
+        horizonDays: automationHorizon,
+        templateDir,
+        outputDir,
+        xRatio,
+        yRatio,
+        fontRatio,
+      };
+      const saved = await window.dateApp.installAutomation(config);
+      setAutomationEnabled(Boolean(saved.enabled));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setAutomationBusy(false);
+    }
+  }
+
+  async function disableAutomation() {
+    if (!window.dateApp) return;
+    setAutomationBusy(true);
+    setError("");
+    try {
+      await window.dateApp.removeAutomation();
+      setAutomationEnabled(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setAutomationBusy(false);
+    }
+  }
+
+  async function clearHistory() {
+    if (!window.dateApp) return;
+    await window.dateApp.clearHistory();
+    setHistory([]);
+  }
+
   async function generate() {
     if (!canGenerate) return;
     setGenerating(true);
@@ -250,6 +337,7 @@ export default function App() {
         fontRatio,
       });
       setResult(finalResult);
+      await refreshHistory();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -350,6 +438,85 @@ export default function App() {
             <RangeControl label="日期字号" hint="相对图片高度" value={fontRatio} min={1.5} max={8} step={0.1} onChange={setFontRatio} />
             <div className="position-tip">也可以直接点击右侧预览图上的目标位置，自动设置 X / Y。</div>
           </div>
+
+          <div className="settings-card automation-card">
+            <div className="card-title-row">
+              <div className="card-title"><Clock3 size={17} /><span>自动化中心</span></div>
+              <span className={automationEnabled ? "automation-status enabled" : "automation-status"}>
+                {automationEnabled ? "已开启" : "未开启"}
+              </span>
+            </div>
+            <div className="automation-grid">
+              <label className="automation-time">
+                <span>每天运行时间</span>
+                <input type="time" value={automationTime} onChange={(event) => setAutomationTime(event.target.value)} />
+              </label>
+              <div className="automation-range">
+                <span>每天准备</span>
+                <div className="automation-segment">
+                  {[1, 2, 7].map((days) => (
+                    <button
+                      key={days}
+                      type="button"
+                      className={automationHorizon === days ? "active" : ""}
+                      onClick={() => setAutomationHorizon(days)}
+                    >
+                      {days === 1 ? "当天" : days === 2 ? "今明两天" : "未来7天"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="automation-actions">
+              <button
+                className="automation-primary"
+                type="button"
+                disabled={automationBusy || !templates.length || !outputDir}
+                onClick={() => void enableAutomation()}
+              >
+                <ShieldCheck size={14} />
+                {automationBusy ? "处理中…" : automationEnabled ? "更新自动任务" : "开启每日自动生成"}
+              </button>
+              {automationEnabled ? (
+                <button className="automation-secondary" type="button" disabled={automationBusy} onClick={() => void disableAutomation()}>
+                  关闭
+                </button>
+              ) : null}
+            </div>
+            <div className="automation-note">
+              到点自动生成；电脑当时未开机时，下次登录会自动补跑。已存在的图片会跳过，只补缺失文件。
+            </div>
+          </div>
+
+          <div className="settings-card history-card">
+            <div className="card-title-row">
+              <div className="card-title"><History size={17} /><span>最近生成</span></div>
+              {history.length ? (
+                <button className="ghost-button" type="button" onClick={() => void clearHistory()}><Trash2 size={13} /> 清空记录</button>
+              ) : null}
+            </div>
+            {history.length ? (
+              <div className="history-list">
+                {history.slice(0, 5).map((item) => (
+                  <div className="history-row" key={item.id}>
+                    <div className={item.complete ? "history-dot complete" : "history-dot"} />
+                    <div className="history-copy">
+                      <strong>{prettyDate(item.date)}</strong>
+                      <span>{item.source === "auto" ? "自动" : "手动"} · {item.actual}/{item.expected} 张</span>
+                    </div>
+                    <span className={item.complete ? "history-badge complete" : "history-badge"}>
+                      {item.complete ? "完整" : "需检查"}
+                    </span>
+                    <button className="history-open" type="button" onClick={() => void window.dateApp.openFolder(item.folder)}>
+                      <ExternalLink size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-history">还没有生成记录。完成一次生成后，这里会显示日期与 32/32 完整性。</div>
+            )}
+          </div>
         </section>
 
         <PreviewPanel
@@ -372,7 +539,14 @@ export default function App() {
           {result ? (
             <>
               <div className="success-icon"><Check size={16} /></div>
-              <div><strong>生成完成</strong><span>已生成 {result.done} 张图片，共 {result.dates} 个日期文件夹</span></div>
+              <div>
+                <strong>生成完成</strong>
+                <span>
+                  {typeof result.created === "number" ? `新生成 ${result.created} 张` : `已处理 ${result.done} 张`}
+                  {result.skipped ? ` · 跳过 ${result.skipped} 张` : ""}
+                  { ` · 共 ${result.dates} 个日期文件夹` }
+                </span>
+              </div>
             </>
           ) : generating ? (
             <>
