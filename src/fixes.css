@@ -1,3 +1,496 @@
-.window-drag-region { pointer-events: auto; }
-.app-header { padding-right: 168px; }
-.document-sheet { container-type: normal; }
+/* UI polish layer --------------------------------------------------------- */
+/* Keep Windows window controls clear while allowing the rest of the titlebar
+   to behave like a draggable desktop surface. */
+.window-drag-region {
+  pointer-events: auto;
+}
+.app-header {
+  padding-right: 174px;
+}
+.document-sheet {
+  container-type: normal;
+}
+
+/* Scale the interface for daily desktop use. The first pass inherited Loom's
+   compact chat density; this tool benefits from larger labels and controls. */
+:root {
+  --panel-shadow: 0 12px 34px rgba(40, 44, 62, .055);
+  --panel-shadow-hover: 0 16px 42px rgba(40, 44, 62, .075);
+}
+
+.app-shell {
+  grid-template-rows: 82px minmax(0, 1fr) 82px;
+}
+
+.app-header {
+  align-items: center;
+  padding-top: 18px;
+  padding-bottom: 14px;
+  border-bottom-color: rgba(216, 219, 228, .82);
+  background: rgba(252, 252, 254, .92);
+}
+
+.brand {
+  gap: 12px;
+}
+
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  box-shadow:
+    0 9px 22px rgba(91, 73, 192, .20),
+    inset 0 1px rgba(255,255,255,.30);
+}
+
+.brand h1 {
+  font-size: 17px;
+  font-weight: 740;
+}
+
+.brand p {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #8a909d;
+}
+
+.header-badge {
+  height: 31px;
+  padding: 0 12px;
+  font-size: 10.5px;
+  background: rgba(255,255,255,.9);
+}
+
+.workspace {
+  grid-template-columns: minmax(430px, 472px) minmax(0, 1fr);
+  gap: 20px;
+  padding: 20px 24px 18px;
+}
+
+.settings-column {
+  padding-right: 6px;
+}
+
+.section-heading {
+  height: 54px;
+  padding: 2px 4px 0;
+}
+
+.eyebrow {
+  font-size: 9px;
+  letter-spacing: .15em;
+}
+
+.section-heading h2,
+.preview-header h2 {
+  margin-top: 4px;
+  font-size: 20px;
+}
+
+.step-badge {
+  margin-top: 9px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #847b9b;
+  background: rgba(109,91,208,.055);
+  font-size: 9.5px;
+}
+
+.settings-card {
+  margin-bottom: 14px;
+  padding: 18px;
+  border-radius: 17px;
+  border-color: rgba(218, 221, 230, .94);
+  background: rgba(255,255,255,.96);
+  box-shadow: var(--panel-shadow);
+  transition: box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.settings-card:hover {
+  border-color: rgba(207, 204, 227, .95);
+  box-shadow: var(--panel-shadow-hover);
+}
+
+.card-title {
+  gap: 9px;
+  font-size: 12.5px;
+}
+
+.card-title svg {
+  width: 18px;
+  height: 18px;
+}
+
+.card-title-row {
+  margin-bottom: 16px;
+}
+
+.file-card .card-title {
+  margin-bottom: 14px;
+}
+
+.picker-row {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+.picker-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+}
+
+.picker-title-row strong {
+  font-size: 12px;
+}
+
+.status-chip {
+  padding: 3px 7px;
+  font-size: 9px;
+}
+
+.picker-description {
+  margin-top: 1px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.picker-path {
+  margin-top: 3px;
+  font-size: 9.5px;
+}
+
+.row-divider {
+  margin: 15px 0;
+}
+
+.secondary-button {
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 10px;
+  font-size: 10px;
+}
+
+.prepare-template-button {
+  height: 36px;
+  margin-top: 12px;
+  border-style: dashed;
+  color: #7165a7;
+  background: #faf9ff;
+}
+
+.prepare-template-button:hover:not(:disabled) {
+  border-style: solid;
+  background: #f4f1ff;
+}
+
+.segmented-control {
+  padding: 3px;
+  border-radius: 10px;
+}
+
+.segmented-control button {
+  height: 29px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: 10px;
+}
+
+.date-field {
+  gap: 6px;
+}
+
+.date-field > span {
+  font-size: 10px;
+}
+
+.date-field input {
+  height: 42px;
+  border-radius: 11px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+.today-button {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 11px;
+  font-size: 10px;
+}
+
+.date-note,
+.position-tip {
+  margin-top: 12px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-size: 9.5px;
+}
+
+.ghost-button {
+  padding: 6px 8px;
+  font-size: 9.5px;
+}
+
+.range-control + .range-control {
+  margin-top: 16px;
+}
+
+.range-heading strong {
+  font-size: 11px;
+}
+
+.range-heading div span {
+  font-size: 9px;
+}
+
+.number-field {
+  width: 70px;
+  height: 31px;
+  border-radius: 9px;
+  padding: 0 8px;
+}
+
+.number-field input {
+  font-size: 10px;
+}
+
+.number-field span {
+  font-size: 9px;
+}
+
+.range-input {
+  height: 21px;
+  margin-top: 6px;
+}
+
+.range-input::-webkit-slider-runnable-track {
+  height: 5px;
+}
+
+.range-input::-webkit-slider-thumb {
+  width: 17px;
+  height: 17px;
+  margin-top: -6px;
+  border-width: 3px;
+}
+
+.preview-panel {
+  border-radius: 20px;
+  grid-template-rows: 70px minmax(0, 1fr) 62px;
+  border-color: rgba(216, 219, 228, .94);
+  box-shadow: 0 20px 56px rgba(38, 43, 60, .09);
+}
+
+.preview-header {
+  padding: 0 20px;
+}
+
+.preview-header h2 {
+  font-size: 18px;
+}
+
+.preview-nav {
+  gap: 8px;
+}
+
+.preview-nav button {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+}
+
+.preview-nav span {
+  min-width: 48px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.preview-canvas {
+  padding: 24px;
+}
+
+.preview-canvas.has-document {
+  background:
+    linear-gradient(45deg, rgba(222,224,231,.28) 25%, transparent 25%, transparent 75%, rgba(222,224,231,.28) 75%),
+    linear-gradient(45deg, rgba(222,224,231,.28) 25%, transparent 25%, transparent 75%, rgba(222,224,231,.28) 75%),
+    #f5f6f9;
+  background-size: 20px 20px;
+  background-position: 0 0, 10px 10px;
+}
+
+.preview-canvas.is-empty {
+  position: relative;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(109,91,208,.08), transparent 32%),
+    linear-gradient(180deg, #fafaff, #f5f6fa);
+}
+
+.preview-canvas.is-empty::before {
+  content: "";
+  position: absolute;
+  inset: 22px;
+  border: 1px dashed rgba(147, 139, 190, .23);
+  border-radius: 18px;
+  pointer-events: none;
+}
+
+.preview-empty {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 86%);
+  padding: 34px 30px 30px;
+  border: 1px solid rgba(221, 220, 235, .82);
+  border-radius: 20px;
+  color: #7f8694;
+  background: rgba(255,255,255,.74);
+  box-shadow: 0 18px 50px rgba(49, 44, 77, .06);
+  backdrop-filter: blur(12px);
+}
+
+.empty-icon {
+  width: 58px;
+  height: 58px;
+  margin-bottom: 14px;
+  border-radius: 17px;
+  color: #7768cf;
+  background: linear-gradient(145deg, #f8f6ff, #eeeaff);
+}
+
+.preview-empty h3 {
+  font-size: 14px;
+  color: #4d5361;
+}
+
+.preview-empty p {
+  max-width: 310px;
+  margin: 7px auto 0;
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
+.preview-empty-action {
+  height: 39px;
+  margin-top: 18px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #fff;
+  background: linear-gradient(135deg, #7565d4, #5e4bc2);
+  box-shadow: 0 8px 20px rgba(91,73,192,.18);
+  cursor: pointer;
+  font-size: 10.5px;
+  font-weight: 700;
+  transition: transform 150ms var(--ease), box-shadow 150ms ease;
+}
+
+.preview-empty-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 11px 24px rgba(91,73,192,.23);
+}
+
+.preview-empty small {
+  display: block;
+  margin-top: 13px;
+  color: #a2a7b1;
+  font-size: 8.5px;
+  letter-spacing: .04em;
+}
+
+.preview-footer {
+  padding: 0 18px;
+}
+
+.preview-file span {
+  max-width: 520px;
+  font-size: 11px;
+}
+
+.preview-file small,
+.click-hint {
+  font-size: 9px;
+}
+
+.click-hint.is-muted {
+  opacity: .42;
+}
+
+.document-sheet {
+  border-radius: 2px;
+  box-shadow:
+    0 24px 64px rgba(38,42,55,.19),
+    0 3px 10px rgba(38,42,55,.08);
+}
+
+.document-sheet img {
+  max-height: calc(100vh - 320px);
+}
+
+.action-bar {
+  padding: 14px 24px 16px;
+  border-top-color: rgba(216, 219, 228, .88);
+  background: rgba(252,252,254,.94);
+}
+
+.action-status strong {
+  font-size: 11.5px;
+}
+
+.action-status span {
+  font-size: 9.5px;
+}
+
+.open-button,
+.primary-button {
+  height: 44px;
+  border-radius: 12px;
+  padding: 0 16px;
+  font-size: 11px;
+}
+
+.primary-button {
+  min-width: 178px;
+}
+
+.success-icon,
+.progress-ring {
+  width: 36px;
+  height: 36px;
+}
+
+.toast-error {
+  bottom: 94px;
+  max-width: 480px;
+  padding: 12px 13px;
+  font-size: 10.5px;
+}
+
+@media (max-width: 1180px) {
+  .workspace {
+    grid-template-columns: minmax(390px, 430px) minmax(0, 1fr);
+    gap: 16px;
+    padding-inline: 18px;
+  }
+}
+
+@media (max-height: 760px) {
+  .app-shell {
+    grid-template-rows: 72px minmax(0,1fr) 72px;
+  }
+  .workspace {
+    padding-top: 14px;
+    padding-bottom: 12px;
+  }
+  .settings-card {
+    padding: 15px;
+    margin-bottom: 10px;
+  }
+  .section-heading {
+    height: 48px;
+  }
+  .range-control + .range-control {
+    margin-top: 12px;
+  }
+}
