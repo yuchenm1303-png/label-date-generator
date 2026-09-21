@@ -58,6 +58,7 @@ export type PreviewRenderPayload = {
   fontFamily: FontFamily;
   bold: boolean;
   letterSpacing: number;
+  builtIn?: boolean;
 };
 
 export type GenerationProgress = {
