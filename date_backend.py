@@ -439,10 +439,18 @@ def generate(payload: dict) -> None:
 
 def main() -> None:
     try:
-        raw = sys.stdin.read()
-        if not raw.strip():
+        raw = sys.stdin.read().strip()
+        if not raw:
             raise ValueError("没有收到生成参数")
-        payload = json.loads(raw)
+
+        # Electron sends Base64-encoded UTF-8 JSON. This avoids Windows path
+        # backslashes ever being interpreted as JSON escapes in transit.
+        # Keep plain JSON as a compatibility fallback for local/manual runs.
+        if raw.startswith("{"):
+            payload = json.loads(raw)
+        else:
+            decoded = base64.b64decode(raw, validate=True).decode("utf-8")
+            payload = json.loads(decoded)
         action = payload.get("action", "generate")
 
         if action == "prepareTemplates":
