@@ -350,9 +350,9 @@ async function runAutomaticGeneration() {
     mode: horizonDays > 1 ? "range" : "single",
     startDate,
     endDate,
-    xRatio: config.xRatio ?? 15,
-    yRatio: config.yRatio ?? 50,
-    fontRatio: config.fontRatio ?? 4.1,
+    xRatio: config.xRatio ?? 15.1,
+    yRatio: config.yRatio ?? 50.3,
+    fontRatio: config.fontRatio ?? 2.6,
     skipExisting: true,
   };
 
