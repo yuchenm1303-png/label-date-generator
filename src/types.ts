@@ -44,6 +44,8 @@ export type GenerationPayload = {
   fontFamily: FontFamily;
   bold: boolean;
   letterSpacing: number;
+  templateNames?: string[];
+  exportScope?: "current" | "selected" | "all";
 };
 
 export type GenerationProgress = {
@@ -72,6 +74,7 @@ export type GenerationHistoryItem = {
   actual: number;
   complete: boolean;
   source: "manual" | "auto";
+  scope?: "current" | "selected" | "all";
   updatedAt: string;
 };
 
