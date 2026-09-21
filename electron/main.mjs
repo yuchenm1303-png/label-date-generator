@@ -202,6 +202,11 @@ function runBackendProcess(command, args, payload, onLine) {
       cwd: app.isPackaged ? process.resourcesPath : ROOT,
       windowsHide: true,
       stdio: ["pipe", "pipe", "pipe"],
+      env: {
+        ...process.env,
+        PYTHONUTF8: "1",
+        PYTHONIOENCODING: "utf-8",
+      },
     });
 
     let stdoutBuffer = "";
@@ -678,7 +683,22 @@ function registerIpc() {
       if (message.type === "done") finalResult = message;
     });
     if (!finalResult) throw new Error("生成任务没有返回完成结果。");
-    return recordHistory(payload, finalResult, "manual");
+
+    // The user-selected path already exists as a native Electron Unicode
+    // string. Rebuild the path we expose to the UI from that source instead
+    // of depending on a Python stdout round-trip.
+    const safeOutputDir = path.normalize(payload.outputDir);
+    const safeOpenPath =
+      payload.mode === "single"
+        ? path.join(safeOutputDir, outputFolderName(payload.startDate))
+        : safeOutputDir;
+    const safeResult = {
+      ...finalResult,
+      outputDir: safeOutputDir,
+      openPath: safeOpenPath,
+    };
+
+    return recordHistory(payload, safeResult, "manual");
   });
 
   ipcMain.handle("history:list", async () => readJson("generation-history.json", []));
