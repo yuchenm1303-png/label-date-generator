@@ -354,13 +354,13 @@ def generate(payload: dict) -> None:
         raise ValueError("没有可生成的模板，请检查当前/多选范围")
 
     values = dates_from_request(payload)
-    x_ratio = float(payload.get("xRatio", 15.1)) / 100
-    y_ratio = float(payload.get("yRatio", 50.3)) / 100
-    font_ratio = float(payload.get("fontRatio", 2.6)) / 100
+    x_ratio = float(payload.get("xRatio", 13.9)) / 100
+    y_ratio = float(payload.get("yRatio", 49.9)) / 100
+    font_ratio = float(payload.get("fontRatio", 1.8)) / 100
     adaptive_position = bool(payload.get("adaptivePosition", True))
     font_family = str(payload.get("fontFamily", "simhei"))
     bold = bool(payload.get("bold", False))
-    letter_spacing_ratio = float(payload.get("letterSpacing", 0.0)) / 100
+    letter_spacing_ratio = float(payload.get("letterSpacing", -7.0)) / 100
 
     total = len(templates) * len(values)
     done = 0
