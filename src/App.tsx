@@ -247,31 +247,55 @@ export default function App() {
     let cancelled = false;
     setAnalysis(null);
 
-    window.dateApp.previewTemplate(current.path)
-      .then((data) => {
-        if (!cancelled) setPreviewData(data);
+    const timer = window.setTimeout(() => {
+      window.dateApp.renderPreview({
+        path: current.path,
+        date: startDate,
+        xRatio,
+        yRatio,
+        fontRatio,
+        adaptivePosition,
+        fontFamily,
+        bold,
+        letterSpacing,
       })
-      .catch((cause) => {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
-      });
-
-    if (adaptivePosition) {
-      window.dateApp.analyzeTemplate(current.path)
-        .then((nextAnalysis) => {
-          if (!cancelled) setAnalysis(nextAnalysis);
+        .then((data) => {
+          if (!cancelled) setPreviewData(data);
         })
         .catch((cause) => {
-          if (!cancelled) {
-            setAnalysis(null);
-            setError(`自适应定位分析失败，将按整张图片定位：${cause instanceof Error ? cause.message : String(cause)}`);
-          }
+          if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
         });
-    }
+
+      if (adaptivePosition) {
+        window.dateApp.analyzeTemplate(current.path)
+          .then((nextAnalysis) => {
+            if (!cancelled) setAnalysis(nextAnalysis);
+          })
+          .catch((cause) => {
+            if (!cancelled) {
+              setAnalysis(null);
+              setError(`自适应定位分析失败，将按整张图片定位：${cause instanceof Error ? cause.message : String(cause)}`);
+            }
+          });
+      }
+    }, 120);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
-  }, [templates, selectedIndex, adaptivePosition]);
+  }, [
+    templates,
+    selectedIndex,
+    startDate,
+    xRatio,
+    yRatio,
+    fontRatio,
+    adaptivePosition,
+    fontFamily,
+    bold,
+    letterSpacing,
+  ]);
 
   const dateCount = mode === "range" ? inclusiveDays(startDate, endDate) : 1;
   const selectedCount = selectedTemplateNames.length;
