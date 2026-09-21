@@ -31,19 +31,20 @@ import type {
 } from "./types";
 
 const DEFAULTS = {
-  xRatio: 15.1,
-  yRatio: 50.3,
-  fontRatio: 2.6,
+  xRatio: 13.9,
+  yRatio: 49.9,
+  fontRatio: 1.8,
   adaptivePosition: true,
   fontFamily: "simhei" as FontFamily,
   bold: false,
-  letterSpacing: 0,
+  letterSpacing: -7,
 };
 
 const LEGACY_PRESETS = [
   { xRatio: 28.5, yRatio: 52, fontRatio: 3.5 },
   { xRatio: 13.2, yRatio: 49.2, fontRatio: 4.3 },
   { xRatio: 15, yRatio: 50, fontRatio: 4.1 },
+  { xRatio: 15.1, yRatio: 50.3, fontRatio: 2.6 },
 ];
 
 function localDateValue(value = new Date()) {
@@ -147,10 +148,12 @@ export default function App() {
           if (Number.isFinite(parsed.fontRatio)) setFontRatio(parsed.fontRatio);
         }
 
-        if (typeof parsed.adaptivePosition === "boolean") setAdaptivePosition(parsed.adaptivePosition);
-        if (isFontFamily(parsed.fontFamily)) setFontFamily(parsed.fontFamily);
-        if (typeof parsed.bold === "boolean") setBold(parsed.bold);
-        if (Number.isFinite(parsed.letterSpacing)) setLetterSpacing(parsed.letterSpacing);
+        if (!isLegacyPreset) {
+          if (typeof parsed.adaptivePosition === "boolean") setAdaptivePosition(parsed.adaptivePosition);
+          if (isFontFamily(parsed.fontFamily)) setFontFamily(parsed.fontFamily);
+          if (typeof parsed.bold === "boolean") setBold(parsed.bold);
+          if (Number.isFinite(parsed.letterSpacing)) setLetterSpacing(parsed.letterSpacing);
+        }
         if (parsed.mode === "single" || parsed.mode === "range") setMode(parsed.mode);
         if (parsed.viewMode === "single" || parsed.viewMode === "grid") setViewMode(parsed.viewMode);
         if (typeof parsed.outputDir === "string") setOutputDir(parsed.outputDir);
