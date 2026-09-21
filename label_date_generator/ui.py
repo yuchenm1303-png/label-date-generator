@@ -10,8 +10,9 @@ from tkinter import filedialog, messagebox, ttk
 
 from PIL import Image, ImageTk
 
+from .auto import install_daily_task, remove_daily_task
 from .core import RenderSettings, generate_for_dates, list_templates, render_date
-from .settings import load_settings, save_settings
+from .settings import AppSettings, load_settings, save_settings
 
 
 def parse_date(value: str) -> date:
@@ -22,18 +23,19 @@ class App(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("配料表日期生成器")
-        self.geometry("1180x760")
-        self.minsize(980, 680)
+        self.geometry("1180x800")
+        self.minsize(980, 700)
 
         saved = load_settings()
         today = date.today()
 
-        self.template_dir = tk.StringVar()
-        self.output_dir = tk.StringVar()
+        self.template_dir = tk.StringVar(value=saved.template_dir)
+        self.output_dir = tk.StringVar(value=saved.output_dir)
         self.start_date = tk.StringVar(value=today.isoformat())
         self.end_date = tk.StringVar(value=today.isoformat())
         self.range_mode = tk.BooleanVar(value=False)
         self.overwrite = tk.BooleanVar(value=False)
+        self.auto_time = tk.StringVar(value="06:00")
 
         self.x_ratio = tk.DoubleVar(value=saved.x_ratio * 100)
         self.y_ratio = tk.DoubleVar(value=saved.y_ratio * 100)
@@ -48,6 +50,7 @@ class App(tk.Tk):
         self.worker: threading.Thread | None = None
 
         self._build()
+        self._restore_templates()
         self.after(100, self._poll_events)
 
     def _build(self) -> None:
@@ -132,15 +135,29 @@ class App(tk.Tk):
         )
         row += 1
 
-        self.generate_btn = ttk.Button(left, text="开始生成", command=self.generate)
-        self.generate_btn.grid(row=row, column=0, sticky="ew", pady=(16, 8), ipady=6)
+        self.generate_btn = ttk.Button(left, text="手动开始生成", command=self.generate)
+        self.generate_btn.grid(row=row, column=0, sticky="ew", pady=(14, 8), ipady=6)
         row += 1
 
         self.progress = ttk.Progressbar(left, maximum=100)
         self.progress.grid(row=row, column=0, sticky="ew")
         row += 1
 
-        ttk.Label(left, textvariable=self.status, wraplength=370).grid(row=row, column=0, sticky="w", pady=(8, 0))
+        auto_box = ttk.LabelFrame(left, text="每日自动生成（Windows）", padding=10)
+        auto_box.grid(row=row, column=0, sticky="ew", pady=(12, 0))
+        auto_box.columnconfigure(1, weight=1)
+        ttk.Label(auto_box, text="每天").grid(row=0, column=0, sticky="w")
+        ttk.Entry(auto_box, textvariable=self.auto_time, width=8).grid(row=0, column=1, sticky="w", padx=(6, 4))
+        ttk.Label(auto_box, text="自动生成当天 32 张").grid(row=0, column=2, sticky="w")
+        ttk.Button(auto_box, text="安装 / 更新自动任务", command=self.install_automation).grid(
+            row=1, column=0, columnspan=2, sticky="ew", pady=(8, 0)
+        )
+        ttk.Button(auto_box, text="取消自动任务", command=self.remove_automation).grid(
+            row=1, column=2, sticky="ew", padx=(8, 0), pady=(8, 0)
+        )
+        row += 1
+
+        ttk.Label(left, textvariable=self.status, wraplength=390).grid(row=row, column=0, sticky="w", pady=(10, 0))
 
         top = ttk.Frame(right)
         top.grid(row=0, column=0, sticky="ew", pady=(0, 8))
@@ -160,6 +177,14 @@ class App(tk.Tk):
         self.y_ratio.trace_add("write", lambda *_: self.update_preview())
         self.font_ratio.trace_add("write", lambda *_: self.update_preview())
         self._toggle_range()
+
+    def _restore_templates(self) -> None:
+        folder = self.template_dir.get().strip()
+        if folder:
+            self.templates = list_templates(Path(folder))
+            if self.templates:
+                self.status.set(f"已恢复上次设置：找到 {len(self.templates)} 张模板")
+                self.update_preview()
 
     def _toggle_range(self) -> None:
         self.end_entry.configure(state="normal" if self.range_mode.get() else "disabled")
@@ -202,6 +227,17 @@ class App(tk.Tk):
             y_ratio=self.y_ratio.get() / 100,
             font_size_ratio=self.font_ratio.get() / 100,
             bold=self.bold.get(),
+        )
+
+    def _app_settings(self) -> AppSettings:
+        render = self._settings()
+        return AppSettings(
+            template_dir=self.template_dir.get().strip(),
+            output_dir=self.output_dir.get().strip(),
+            x_ratio=render.x_ratio,
+            y_ratio=render.y_ratio,
+            font_size_ratio=render.font_size_ratio,
+            bold=render.bold,
         )
 
     def update_preview(self) -> None:
@@ -273,7 +309,7 @@ class App(tk.Tk):
                 return
 
             settings = self._settings()
-            save_settings(settings)
+            save_settings(self._app_settings())
             overwrite = self.overwrite.get()
 
             self.progress["value"] = 0
@@ -288,6 +324,31 @@ class App(tk.Tk):
             self.worker.start()
         except Exception as exc:
             messagebox.showerror("无法生成", str(exc))
+
+    def install_automation(self) -> None:
+        try:
+            if not self.templates:
+                raise ValueError("请先选择模板文件夹")
+            if not self.output_dir.get().strip():
+                raise ValueError("请先选择输出位置")
+            save_settings(self._app_settings())
+            install_daily_task(self.auto_time.get().strip())
+            self.status.set(f"每日自动任务已安装：每天 {self.auto_time.get().strip()} 自动生成当天图片")
+            messagebox.showinfo(
+                "自动任务已安装",
+                "以后 Windows 会在设定时间自动生成当天的配料表。\n"
+                "如果当天文件已经存在，会自动跳过已有文件，不会重复覆盖。",
+            )
+        except Exception as exc:
+            messagebox.showerror("无法安装自动任务", str(exc))
+
+    def remove_automation(self) -> None:
+        try:
+            remove_daily_task()
+            self.status.set("每日自动任务已取消")
+            messagebox.showinfo("已取消", "Windows 每日自动生成任务已取消。")
+        except Exception as exc:
+            messagebox.showerror("无法取消自动任务", str(exc))
 
     def _run_generation(self, out: Path, start: date, end: date, settings: RenderSettings, overwrite: bool) -> None:
         def progress(done, total, d, src):
