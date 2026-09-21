@@ -38,4 +38,30 @@ export type GenerationResult = {
   total: number;
   dates: number;
   outputDir: string;
+  created?: number;
+  skipped?: number;
+};
+
+
+export type GenerationHistoryItem = {
+  id: string;
+  date: string;
+  folder: string;
+  expected: number;
+  actual: number;
+  complete: boolean;
+  source: "manual" | "auto";
+  updatedAt: string;
+};
+
+export type AutomationConfig = {
+  enabled: boolean;
+  time: string;
+  horizonDays: number;
+  templateDir?: string;
+  outputDir?: string;
+  xRatio?: number;
+  yRatio?: number;
+  fontRatio?: number;
+  updatedAt?: string;
 };
