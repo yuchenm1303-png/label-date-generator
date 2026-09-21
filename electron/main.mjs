@@ -25,8 +25,26 @@ function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      preload: path.join(__dirname, "preload.mjs"),
+      sandbox: true,
+      preload: path.join(__dirname, "preload.cjs"),
     },
+  });
+
+  win.webContents.on("preload-error", (_event, preloadPath, error) => {
+    console.error("[date-generator] preload failed", preloadPath, error);
+    dialog.showErrorBox(
+      "配料表日期生成器启动失败",
+      `桌面桥接加载失败：\n${error?.message || String(error)}\n\n请关闭窗口后重新运行 npm run dev。`,
+    );
+  });
+
+  win.webContents.on("did-fail-load", (_event, code, description, validatedURL, isMainFrame) => {
+    if (!isMainFrame) return;
+    console.error("[date-generator] renderer failed to load", { code, description, validatedURL });
+  });
+
+  win.webContents.on("render-process-gone", (_event, details) => {
+    console.error("[date-generator] renderer process exited", details);
   });
 
   const devUrl = process.env.VITE_DEV_SERVER_URL;
