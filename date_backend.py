@@ -167,9 +167,9 @@ def generate(payload: dict) -> None:
         raise ValueError("模板文件夹中没有可用图片")
 
     values = dates_from_request(payload)
-    x_ratio = float(payload.get("xRatio", 13.2)) / 100
-    y_ratio = float(payload.get("yRatio", 49.2)) / 100
-    font_ratio = float(payload.get("fontRatio", 4.3)) / 100
+    x_ratio = float(payload.get("xRatio", 15.0)) / 100
+    y_ratio = float(payload.get("yRatio", 50.0)) / 100
+    font_ratio = float(payload.get("fontRatio", 4.1)) / 100
     total = len(templates) * len(values)
     done = 0
 
