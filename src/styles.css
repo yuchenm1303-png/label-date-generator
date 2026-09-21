@@ -269,8 +269,8 @@ button { color: inherit; }
 .bold-toggle button { height: 32px; border: 1px solid #dfe2e9; border-radius: 9px; color: #737987; background: #fbfbfc; cursor: pointer; font-size: 9px; font-weight: 680; }
 .bold-toggle button.active { color: #5c4db5; border-color: #d7d0f1; background: #f3f0ff; }
 
-.preset-row { display: grid; grid-template-columns: minmax(0,1fr) auto auto; gap: 6px; margin-top: 12px; }
-.preset-row select {
+.preset-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr) auto auto; gap: 6px; margin-top: 12px; }
+.preset-row select, .preset-name-input {
   min-width: 0;
   height: 31px;
   border: 1px solid #dfe2e9;
@@ -281,6 +281,8 @@ button { color: inherit; }
   background: #fbfbfc;
   font-size: 8.5px;
 }
+.preset-name-input:focus, .preset-row select:focus { border-color: #bfb7e7; box-shadow: 0 0 0 3px rgba(109,91,208,.06); }
+.preset-name-input::placeholder { color: #b0b5bf; }
 .preset-save, .preset-delete { height: 31px; border: 0; border-radius: 9px; cursor: pointer; }
 .preset-save { padding: 0 10px; display: inline-flex; align-items: center; gap: 5px; color: #6254b6; background: #f1eeff; font-size: 8.5px; font-weight: 700; }
 .preset-save:hover { background: #e9e4ff; }
@@ -389,4 +391,6 @@ button { color: inherit; }
   .date-grid.two-columns { grid-template-columns: 1fr 1fr; }
   .quick-date-row { grid-template-columns: repeat(2, minmax(0,1fr)); }
   .automation-grid { grid-template-columns: 1fr; }
+  .preset-row { grid-template-columns: 1fr 1fr; }
+  .preset-save, .preset-delete { width: 100%; }
 }
