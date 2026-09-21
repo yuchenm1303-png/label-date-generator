@@ -39,3 +39,6 @@ jobs:
 
       - name: Python syntax check
         run: python -m py_compile date_backend.py
+
+      - name: Python unit tests
+        run: python -m unittest discover -s tests
