@@ -1,5 +1,5 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
-import { spawn } from "node:child_process";
+import { app, BrowserWindow, dialog, ipcMain, shell, Notification } from "electron";
+import { execFile, spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,6 +7,8 @@ import { fileURLToPath } from "node:url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".bmp", ".webp"]);
+const TASK_DAILY = "配料表日期生成器-每日自动生成";
+const TASK_LOGON = "配料表日期生成器-开机补生成";
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -55,13 +57,12 @@ function createWindow() {
   }
 }
 
-function scanTemplates(dir) {
-  return fs.readdir(dir, { withFileTypes: true }).then((entries) =>
-    entries
-      .filter((entry) => entry.isFile() && IMAGE_EXTS.has(path.extname(entry.name).toLowerCase()))
-      .map((entry) => ({ name: entry.name, path: path.join(dir, entry.name) }))
-      .sort((a, b) => a.name.localeCompare(b.name, "zh-CN", { numeric: true })),
-  );
+async function scanTemplates(dir) {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  return entries
+    .filter((entry) => entry.isFile() && IMAGE_EXTS.has(path.extname(entry.name).toLowerCase()))
+    .map((entry) => ({ name: entry.name, path: path.join(dir, entry.name) }))
+    .sort((a, b) => a.name.localeCompare(b.name, "zh-CN", { numeric: true }));
 }
 
 function mimeFor(filePath) {
@@ -148,7 +149,210 @@ async function runBackend(payload, onLine) {
   throw lastError || new Error("未找到 Python。请安装 Python 3.10+ 后重试。");
 }
 
-app.whenReady().then(() => {
+function userDataFile(name) {
+  return path.join(app.getPath("userData"), name);
+}
+
+async function readJson(name, fallback) {
+  try {
+    return JSON.parse(await fs.readFile(userDataFile(name), "utf8"));
+  } catch {
+    return fallback;
+  }
+}
+
+async function writeJson(name, value) {
+  await fs.mkdir(app.getPath("userData"), { recursive: true });
+  await fs.writeFile(userDataFile(name), JSON.stringify(value, null, 2), "utf8");
+}
+
+function localDateValue(value = new Date()) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDaysValue(value, days) {
+  const current = new Date(`${value}T00:00:00`);
+  current.setDate(current.getDate() + days);
+  return localDateValue(current);
+}
+
+function dateValues(start, end) {
+  const result = [];
+  let current = start;
+  while (current <= end) {
+    result.push(current);
+    current = addDaysValue(current, 1);
+  }
+  return result;
+}
+
+function outputFolderName(value) {
+  const [, month, day] = value.split("-").map(Number);
+  return `${month}月${day}日`;
+}
+
+async function recordHistory(payload, result, source = "manual") {
+  const templates = await scanTemplates(payload.templateDir);
+  const dates = payload.mode === "range"
+    ? dateValues(payload.startDate, payload.endDate)
+    : [payload.startDate];
+
+  const existing = await readJson("generation-history.json", []);
+  const next = [...existing];
+
+  for (const value of dates) {
+    const folder = path.join(payload.outputDir, outputFolderName(value));
+    let actual = 0;
+    try {
+      actual = (await scanTemplates(folder)).length;
+    } catch {
+      actual = 0;
+    }
+    const expected = templates.length;
+    const entry = {
+      id: `${payload.outputDir}::${value}`,
+      date: value,
+      folder,
+      expected,
+      actual,
+      complete: expected > 0 && actual >= expected,
+      source,
+      updatedAt: new Date().toISOString(),
+    };
+    const index = next.findIndex((item) => item.id === entry.id);
+    if (index >= 0) next.splice(index, 1);
+    next.unshift(entry);
+  }
+
+  await writeJson("generation-history.json", next.slice(0, 60));
+  return { ...result, historyUpdated: true };
+}
+
+function execFilePromise(command, args) {
+  return new Promise((resolve, reject) => {
+    execFile(command, args, { windowsHide: true }, (error, stdout, stderr) => {
+      if (error) {
+        reject(new Error((stderr || stdout || error.message).trim()));
+        return;
+      }
+      resolve(stdout);
+    });
+  });
+}
+
+function automationCommand() {
+  if (app.isPackaged) {
+    return `"${process.execPath}" --auto-generate`;
+  }
+  return `"${process.execPath}" "${ROOT}" --auto-generate`;
+}
+
+async function taskExists(name) {
+  if (process.platform !== "win32") return false;
+  try {
+    await execFilePromise("schtasks", ["/Query", "/TN", name]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function installAutomation(config) {
+  if (process.platform !== "win32") {
+    throw new Error("每日自动生成目前只支持 Windows。");
+  }
+
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(config.time)) {
+    throw new Error("自动运行时间格式应为 HH:MM，例如 06:00。");
+  }
+
+  const command = automationCommand();
+  await execFilePromise("schtasks", [
+    "/Create", "/SC", "DAILY", "/TN", TASK_DAILY, "/TR", command,
+    "/ST", config.time, "/RL", "LIMITED", "/F",
+  ]);
+
+  // A second ONLOGON task safely catches up after a powered-off scheduled time.
+  await execFilePromise("schtasks", [
+    "/Create", "/SC", "ONLOGON", "/TN", TASK_LOGON, "/TR", command,
+    "/RL", "LIMITED", "/F",
+  ]);
+
+  const saved = { ...config, enabled: true, updatedAt: new Date().toISOString() };
+  await writeJson("automation.json", saved);
+  return saved;
+}
+
+async function removeAutomation() {
+  if (process.platform === "win32") {
+    for (const name of [TASK_DAILY, TASK_LOGON]) {
+      try {
+        await execFilePromise("schtasks", ["/Delete", "/TN", name, "/F"]);
+      } catch {
+        // It is fine if a task was already absent.
+      }
+    }
+  }
+  const saved = await readJson("automation.json", {});
+  const next = { ...saved, enabled: false, updatedAt: new Date().toISOString() };
+  await writeJson("automation.json", next);
+  return next;
+}
+
+async function getAutomation() {
+  const saved = await readJson("automation.json", {
+    enabled: false,
+    time: "06:00",
+    horizonDays: 1,
+  });
+  const dailyExists = await taskExists(TASK_DAILY);
+  return {
+    ...saved,
+    enabled: Boolean(saved.enabled && dailyExists),
+  };
+}
+
+async function runAutomaticGeneration() {
+  const config = await readJson("automation.json", null);
+  if (!config?.enabled || !config.templateDir || !config.outputDir) {
+    return { skipped: true, reason: "automation-not-configured" };
+  }
+
+  const startDate = localDateValue();
+  const horizonDays = Math.max(1, Math.min(31, Number(config.horizonDays) || 1));
+  const endDate = addDaysValue(startDate, horizonDays - 1);
+  const payload = {
+    action: "generate",
+    templateDir: config.templateDir,
+    outputDir: config.outputDir,
+    mode: horizonDays > 1 ? "range" : "single",
+    startDate,
+    endDate,
+    xRatio: config.xRatio ?? 15,
+    yRatio: config.yRatio ?? 50,
+    fontRatio: config.fontRatio ?? 4.1,
+    skipExisting: true,
+  };
+
+  let finalResult = null;
+  await runBackend(payload, (message) => {
+    if (message.type === "done") finalResult = message;
+  });
+  if (!finalResult) throw new Error("自动生成没有返回完成结果。");
+
+  await recordHistory(payload, finalResult, "auto");
+  return finalResult;
+}
+
+function notify(title, body) {
+  if (!Notification.isSupported()) return;
+  new Notification({ title, body }).show();
+}
+
+function registerIpc() {
   ipcMain.handle("templates:scan", async (_event, dir) => {
     if (!dir || typeof dir !== "string") return null;
     try {
@@ -234,16 +438,46 @@ app.whenReady().then(() => {
       if (message.type === "done") finalResult = message;
     });
     if (!finalResult) throw new Error("生成任务没有返回完成结果。");
-    return finalResult;
+    return recordHistory(payload, finalResult, "manual");
   });
+
+  ipcMain.handle("history:list", async () => readJson("generation-history.json", []));
+  ipcMain.handle("history:clear", async () => {
+    await writeJson("generation-history.json", []);
+    return true;
+  });
+
+  ipcMain.handle("automation:get", async () => getAutomation());
+  ipcMain.handle("automation:install", async (_event, config) => installAutomation(config));
+  ipcMain.handle("automation:remove", async () => removeAutomation());
 
   ipcMain.handle("folder:open", async (_event, folderPath) => {
     const error = await shell.openPath(folderPath);
     if (error) throw new Error(error);
     return true;
   });
+}
 
+app.whenReady().then(async () => {
+  if (process.argv.includes("--auto-generate")) {
+    try {
+      const result = await runAutomaticGeneration();
+      if (!result?.skipped) {
+        notify("配料表自动生成完成", `已处理 ${result.total ?? result.done ?? 0} 张图片。`);
+      }
+    } catch (error) {
+      console.error("[date-generator] automatic generation failed", error);
+      notify("配料表自动生成失败", error?.message || String(error));
+      process.exitCode = 1;
+    } finally {
+      setTimeout(() => app.quit(), 800);
+    }
+    return;
+  }
+
+  registerIpc();
   createWindow();
+
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
