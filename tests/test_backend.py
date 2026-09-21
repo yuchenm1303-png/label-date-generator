@@ -44,8 +44,10 @@ class BackendTests(unittest.TestCase):
             )
 
             self.assertEqual(rendered.size, (1000, 500))
-            # The date should change pixels inside the label but not near the image edge.
-            self.assertNotEqual(rendered.getpixel((190, 250)), (255, 255, 255))
+            # The date should create dark pixels around the expected label-relative region,
+            # while the image edge remains untouched.
+            date_region = rendered.crop((180, 232, 390, 270)).convert("L")
+            self.assertLess(date_region.getextrema()[0], 200)
             self.assertEqual(rendered.getpixel((10, 10)), (255, 255, 255))
 
 
