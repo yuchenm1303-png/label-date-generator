@@ -37,12 +37,17 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "package.json"
+      "package.json",
+      "build/icon.png"
     ],
     "extraResources": [
       {
         "from": "date_backend.py",
         "to": "date_backend.py"
+      },
+      {
+        "from": "build/icon.png",
+        "to": "feather-quill.png"
       }
     ],
     "artifactName": "配料表日期生成器-${version}-${arch}.${ext}",
@@ -50,10 +55,13 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
-      "requestedExecutionLevel": "asInvoker"
+      "requestedExecutionLevel": "asInvoker",
+      "icon": "build/icon.png"
     },
     "nsis": {
       "oneClick": false,
