@@ -1,3 +1,7 @@
+import base64
+import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from datetime import date
@@ -22,6 +26,51 @@ class BackendTests(unittest.TestCase):
         self.assertLessEqual(abs(right - 1186), 3)
         self.assertLessEqual(abs(bottom - 601), 3)
         self.assertGreater(confidence, 0.8)
+
+    def test_unicode_windows_style_paths_round_trip_through_backend_protocol(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "邹羽宸" / "OneDrive" / "Desktop"
+            templates = root / "自营配料表" / "无日期模板"
+            output = root / "自动生成结果"
+            templates.mkdir(parents=True)
+
+            filename = "豆可滋 白干 净含量 2斤.png"
+            src = templates / filename
+            img = Image.new("RGB", (1000, 500), "white")
+            draw = ImageDraw.Draw(img)
+            draw.rectangle((50, 40, 950, 460), outline="black", width=2)
+            img.save(src)
+
+            payload = {
+                "action": "generate",
+                "templateDir": str(templates),
+                "outputDir": str(output),
+                "mode": "single",
+                "startDate": "2026-09-21",
+                "endDate": "2026-09-21",
+                "xRatio": 14.3,
+                "yRatio": 49.9,
+                "fontRatio": 4.0,
+                "adaptivePosition": True,
+                "fontFamily": "simhei",
+                "bold": False,
+                "letterSpacing": -7,
+            }
+            encoded = base64.b64encode(
+                json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            ).decode("ascii")
+
+            backend = Path(__file__).resolve().parents[1] / "date_backend.py"
+            completed = subprocess.run(
+                [sys.executable, str(backend)],
+                input=encoded,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+
+            self.assertEqual(completed.returncode, 0, completed.stderr)
+            self.assertTrue((output / "9月21日" / filename).exists())
 
     def test_adaptive_render_uses_label_relative_coordinates(self):
         with tempfile.TemporaryDirectory() as tmp:
