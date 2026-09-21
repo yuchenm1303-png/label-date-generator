@@ -9,6 +9,7 @@ import type {
 declare global {
   interface Window {
     dateApp: {
+      scanTemplates: (dir: string) => Promise<TemplateSelection | null>;
       chooseTemplates: () => Promise<TemplateSelection | null>;
       prepareTemplates: () => Promise<TemplatePreparationResult | null>;
       chooseOutput: () => Promise<string | null>;
