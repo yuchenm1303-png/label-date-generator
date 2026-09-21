@@ -1362,3 +1362,108 @@ select {
     animation: none !important;
   }
 }
+
+
+/* Feather small-size rendering fix --------------------------------------- */
+/* The source artwork contains near-white feather sections. On the white app
+   chrome those sections visually disappeared after raster downscaling, which
+   made the quill look cropped. For small UI marks, reuse the exact artwork's
+   alpha silhouette as a CSS mask and paint it with the brand gradient. This
+   keeps the complete feather/nib silhouette visible without adding a tile. */
+.brand-mark {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  overflow: visible;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.brand-mark::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(116, 91, 221, .12) 0%,
+    rgba(116, 91, 221, .055) 44%,
+    rgba(116, 91, 221, 0) 72%
+  );
+  filter: blur(5px);
+  pointer-events: none;
+}
+
+.brand-mark-image {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(145deg, #a88cff 3%, #7c61df 46%, #5b43bf 100%);
+  -webkit-mask: url("./feather-quill.png") center / contain no-repeat;
+  mask: url("./feather-quill.png") center / contain no-repeat;
+  filter:
+    drop-shadow(0 4px 5px rgba(82, 61, 177, .20))
+    drop-shadow(0 1px 1px rgba(75, 54, 159, .12));
+  transform: none;
+  opacity: 1;
+  transition:
+    transform 200ms cubic-bezier(.2,.82,.2,1),
+    filter 200ms ease;
+}
+
+.brand:hover .brand-mark-image {
+  transform: translateY(-1px) scale(1.035);
+  filter:
+    drop-shadow(0 6px 7px rgba(82, 61, 177, .23))
+    drop-shadow(0 1px 1px rgba(75, 54, 159, .14));
+}
+
+.brand-empty-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  overflow: visible;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.brand-empty-icon::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(116, 91, 221, .11) 0%,
+    rgba(116, 91, 221, .045) 48%,
+    transparent 74%
+  );
+  filter: blur(7px);
+}
+
+.brand-empty-mark {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(145deg, #ad93ff 2%, #8167e3 48%, #6048c4 100%);
+  -webkit-mask: url("./feather-quill.png") center / contain no-repeat;
+  mask: url("./feather-quill.png") center / contain no-repeat;
+  filter: drop-shadow(0 8px 10px rgba(82, 61, 177, .18));
+  animation: feather-idle 5.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-mark-image,
+  .brand-empty-mark {
+    transition-duration: 0.001ms !important;
+    animation: none !important;
+  }
+}
