@@ -11,7 +11,13 @@ from tkinter import filedialog, messagebox, ttk
 from PIL import Image, ImageTk
 
 from .auto import install_daily_task, remove_daily_task
-from .core import RenderSettings, generate_for_dates, list_templates, render_date
+from .core import (
+    RenderSettings,
+    generate_for_dates,
+    list_templates,
+    prepare_templates_from_dated_folder,
+    render_date,
+)
 from .settings import AppSettings, load_settings, save_settings
 
 
@@ -23,8 +29,8 @@ class App(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("配料表日期生成器")
-        self.geometry("1180x800")
-        self.minsize(980, 700)
+        self.geometry("1180x850")
+        self.minsize(980, 760)
 
         saved = load_settings()
         today = date.today()
@@ -54,13 +60,13 @@ class App(tk.Tk):
         self.after(100, self._poll_events)
 
     def _build(self) -> None:
-        root = ttk.Frame(self, padding=16)
+        root = ttk.Frame(self, padding=14)
         root.pack(fill="both", expand=True)
         root.columnconfigure(1, weight=1)
         root.rowconfigure(0, weight=1)
 
-        left = ttk.LabelFrame(root, text="生成设置", padding=14)
-        left.grid(row=0, column=0, sticky="nsw", padx=(0, 14))
+        left = ttk.LabelFrame(root, text="生成设置", padding=12)
+        left.grid(row=0, column=0, sticky="nsw", padx=(0, 12))
         left.columnconfigure(0, weight=1)
 
         right = ttk.LabelFrame(root, text="效果预览（可点击定位日期）", padding=10)
@@ -69,16 +75,24 @@ class App(tk.Tk):
         right.rowconfigure(1, weight=1)
 
         row = 0
-        ttk.Label(left, text="模板文件夹").grid(row=row, column=0, sticky="w")
+        ttk.Label(left, text="无日期模板文件夹").grid(row=row, column=0, sticky="w")
         row += 1
         f = ttk.Frame(left)
-        f.grid(row=row, column=0, sticky="ew", pady=(4, 4))
+        f.grid(row=row, column=0, sticky="ew", pady=(4, 2))
         f.columnconfigure(0, weight=1)
         ttk.Entry(f, textvariable=self.template_dir, width=44).grid(row=0, column=0, sticky="ew")
         ttk.Button(f, text="选择…", command=self.choose_templates).grid(row=0, column=1, padx=(8, 0))
         row += 1
 
-        ttk.Label(left, text="输出位置").grid(row=row, column=0, sticky="w", pady=(10, 0))
+        self.prep_btn = ttk.Button(
+            left,
+            text="没有无日期模板？从历史成品一键生成…",
+            command=self.prepare_blank_templates,
+        )
+        self.prep_btn.grid(row=row, column=0, sticky="ew", pady=(4, 8))
+        row += 1
+
+        ttk.Label(left, text="输出位置").grid(row=row, column=0, sticky="w", pady=(4, 0))
         row += 1
         f = ttk.Frame(left)
         f.grid(row=row, column=0, sticky="ew", pady=(4, 4))
@@ -87,7 +101,7 @@ class App(tk.Tk):
         ttk.Button(f, text="选择…", command=self.choose_output).grid(row=0, column=1, padx=(8, 0))
         row += 1
 
-        ttk.Separator(left).grid(row=row, column=0, sticky="ew", pady=12)
+        ttk.Separator(left).grid(row=row, column=0, sticky="ew", pady=10)
         row += 1
 
         ttk.Label(left, text="开始日期（YYYY-MM-DD）").grid(row=row, column=0, sticky="w")
@@ -103,13 +117,13 @@ class App(tk.Tk):
             row=row, column=0, sticky="w", pady=(4, 0)
         )
         row += 1
-        ttk.Label(left, text="结束日期").grid(row=row, column=0, sticky="w", pady=(6, 0))
+        ttk.Label(left, text="结束日期").grid(row=row, column=0, sticky="w", pady=(4, 0))
         row += 1
         self.end_entry = ttk.Entry(left, textvariable=self.end_date)
         self.end_entry.grid(row=row, column=0, sticky="ew", pady=(4, 4))
         row += 1
 
-        ttk.Separator(left).grid(row=row, column=0, sticky="ew", pady=12)
+        ttk.Separator(left).grid(row=row, column=0, sticky="ew", pady=10)
         row += 1
 
         for label, var, lo, hi in [
@@ -117,7 +131,7 @@ class App(tk.Tk):
             ("日期起点 Y（图片高度 %）", self.y_ratio, 10, 90),
             ("日期字号（图片高度 %）", self.font_ratio, 1.5, 8.0),
         ]:
-            ttk.Label(left, text=label).grid(row=row, column=0, sticky="w", pady=(4, 0))
+            ttk.Label(left, text=label).grid(row=row, column=0, sticky="w", pady=(2, 0))
             row += 1
             sf = ttk.Frame(left)
             sf.grid(row=row, column=0, sticky="ew")
@@ -126,38 +140,40 @@ class App(tk.Tk):
             ttk.Label(sf, textvariable=var, width=8).grid(row=0, column=1, padx=(8, 0))
             row += 1
 
-        ttk.Checkbutton(left, text="粗体", variable=self.bold, command=self.update_preview).grid(
-            row=row, column=0, sticky="w", pady=(6, 0)
-        )
+        options = ttk.Frame(left)
+        options.grid(row=row, column=0, sticky="ew", pady=(4, 0))
+        ttk.Checkbutton(options, text="粗体", variable=self.bold, command=self.update_preview).pack(side="left")
+        ttk.Button(options, text="恢复推荐参数", command=self.use_recommended_settings).pack(side="right")
         row += 1
+
         ttk.Checkbutton(left, text="允许覆盖已经生成的同名图片", variable=self.overwrite).grid(
             row=row, column=0, sticky="w", pady=(4, 0)
         )
         row += 1
 
         self.generate_btn = ttk.Button(left, text="手动开始生成", command=self.generate)
-        self.generate_btn.grid(row=row, column=0, sticky="ew", pady=(14, 8), ipady=6)
+        self.generate_btn.grid(row=row, column=0, sticky="ew", pady=(10, 6), ipady=5)
         row += 1
 
         self.progress = ttk.Progressbar(left, maximum=100)
         self.progress.grid(row=row, column=0, sticky="ew")
         row += 1
 
-        auto_box = ttk.LabelFrame(left, text="每日自动生成（Windows）", padding=10)
-        auto_box.grid(row=row, column=0, sticky="ew", pady=(12, 0))
+        auto_box = ttk.LabelFrame(left, text="每日自动生成（Windows）", padding=8)
+        auto_box.grid(row=row, column=0, sticky="ew", pady=(10, 0))
         auto_box.columnconfigure(1, weight=1)
         ttk.Label(auto_box, text="每天").grid(row=0, column=0, sticky="w")
         ttk.Entry(auto_box, textvariable=self.auto_time, width=8).grid(row=0, column=1, sticky="w", padx=(6, 4))
         ttk.Label(auto_box, text="自动生成当天 32 张").grid(row=0, column=2, sticky="w")
         ttk.Button(auto_box, text="安装 / 更新自动任务", command=self.install_automation).grid(
-            row=1, column=0, columnspan=2, sticky="ew", pady=(8, 0)
+            row=1, column=0, columnspan=2, sticky="ew", pady=(6, 0)
         )
         ttk.Button(auto_box, text="取消自动任务", command=self.remove_automation).grid(
-            row=1, column=2, sticky="ew", padx=(8, 0), pady=(8, 0)
+            row=1, column=2, sticky="ew", padx=(8, 0), pady=(6, 0)
         )
         row += 1
 
-        ttk.Label(left, textvariable=self.status, wraplength=390).grid(row=row, column=0, sticky="w", pady=(10, 0))
+        ttk.Label(left, textvariable=self.status, wraplength=390).grid(row=row, column=0, sticky="w", pady=(8, 0))
 
         top = ttk.Frame(right)
         top.grid(row=0, column=0, sticky="ew", pady=(0, 8))
@@ -194,6 +210,74 @@ class App(tk.Tk):
         self.start_date.set(today)
         if not self.range_mode.get():
             self.end_date.set(today)
+
+    def use_recommended_settings(self) -> None:
+        self.x_ratio.set(13.2)
+        self.y_ratio.set(49.2)
+        self.font_ratio.set(4.3)
+        self.bold.set(True)
+        self.status.set("已恢复根据现有历史成品校准的推荐日期参数")
+        self.update_preview()
+
+    def prepare_blank_templates(self) -> None:
+        source = filedialog.askdirectory(
+            title="选择一个已有日期的历史成品文件夹（例如 10月1日，里面应有 32 张图片）"
+        )
+        if not source:
+            return
+
+        source_dir = Path(source)
+        sources = list_templates(source_dir)
+        if not sources:
+            messagebox.showerror("无法准备模板", "所选文件夹中没有找到配料表图片。")
+            return
+
+        if len(sources) != 32:
+            proceed = messagebox.askyesno(
+                "图片数量不是 32 张",
+                f"当前文件夹找到 {len(sources)} 张图片，不是预期的 32 张。\n\n是否仍然继续？",
+            )
+            if not proceed:
+                return
+
+        destination = source_dir.parent / "无日期模板"
+        existing = list_templates(destination)
+        overwrite = False
+        if existing:
+            overwrite = messagebox.askyesno(
+                "无日期模板已存在",
+                f"{destination} 中已经有 {len(existing)} 张图片。\n\n是否覆盖并重新生成？",
+            )
+            if not overwrite:
+                return
+
+        try:
+            count = prepare_templates_from_dated_folder(
+                source_dir,
+                destination,
+                overwrite=overwrite,
+            )
+            self.template_dir.set(str(destination))
+            self.templates = list_templates(destination)
+            self.preview_index = 0
+
+            if not self.output_dir.get().strip():
+                self.output_dir.set(str(source_dir.parent / "自动生成结果"))
+
+            self.use_recommended_settings()
+            save_settings(self._app_settings())
+            self.status.set(f"模板准备完成：已生成 {count} 张无日期模板，可直接开始测试")
+            self.update_preview()
+            messagebox.showinfo(
+                "模板准备完成",
+                f"已从历史成品生成 {count} 张无日期模板。\n\n"
+                f"模板文件夹：{destination}\n\n"
+                "程序已经自动选中这套模板，现在可以选择日期并点击“手动开始生成”。",
+            )
+            if os.name == "nt":
+                os.startfile(destination)
+        except Exception as exc:
+            messagebox.showerror("无法准备模板", str(exc))
 
     def choose_templates(self) -> None:
         folder = filedialog.askdirectory(title="选择无日期配料表模板文件夹")
