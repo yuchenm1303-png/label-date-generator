@@ -10,6 +10,17 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
+# The packaged Windows backend communicates with Electron over pipes.
+# Windows may otherwise choose a legacy code page (for example GBK) for
+# stdout/stderr, which corrupts Chinese paths when Electron decodes UTF-8.
+for _stream_name in ("stdin", "stdout", "stderr"):
+    _stream = getattr(sys, _stream_name, None)
+    if _stream is not None and hasattr(_stream, "reconfigure"):
+        try:
+            _stream.reconfigure(encoding="utf-8", errors="strict" if _stream_name != "stderr" else "replace")
+        except Exception:
+            pass
+
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
 
 # Calibrated from the user's existing self-operated label screenshots.
