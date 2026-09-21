@@ -434,6 +434,7 @@ def generate(payload: dict) -> None:
         skipped=skipped,
         dates=len(values),
         outputDir=str(output_dir),
+        openPath=str(output_dir / folder_name(values[0])) if len(values) == 1 else str(output_dir),
     )
 
 
