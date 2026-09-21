@@ -77,21 +77,41 @@ function mimeFor(filePath) {
   return "image/jpeg";
 }
 
-function backendPath() {
-  return app.isPackaged
-    ? path.join(process.resourcesPath, "date_backend.py")
-    : path.join(ROOT, "date_backend.py");
+function backendScriptPath() {
+  return path.join(ROOT, "date_backend.py");
 }
 
-function pythonCandidates() {
-  if (process.env.PYTHON) return [[process.env.PYTHON, []]];
-  if (process.platform === "win32") return [["py", ["-3"]], ["python", []]];
-  return [["python3", []], ["python", []]];
+function backendCandidates() {
+  if (app.isPackaged) {
+    return [[path.join(process.resourcesPath, "date-backend.exe"), []]];
+  }
+
+  const script = backendScriptPath();
+  if (process.env.PYTHON) return [[process.env.PYTHON, [script]]];
+  if (process.platform === "win32") {
+    return [["py", ["-3", script]], ["python", [script]]];
+  }
+  return [["python3", [script]], ["python", [script]]];
 }
 
-function runWithPython(command, args, payload, onLine) {
+function compactBackendError(stderr) {
+  const lines = String(stderr || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (!lines.length) return "";
+  const useful = lines.filter(
+    (line) =>
+      !line.startsWith("Error processing line") &&
+      !line.startsWith("Remainder of file ignored") &&
+      !line.includes("site-packages\\sphinxcontrib_"),
+  );
+  return (useful.length ? useful : lines).slice(-4).join("\n");
+}
+
+function runBackendProcess(command, args, payload, onLine) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, [...args, backendPath()], {
+    const child = spawn(command, args, {
       cwd: app.isPackaged ? process.resourcesPath : ROOT,
       windowsHide: true,
       stdio: ["pipe", "pipe", "pipe"],
@@ -99,6 +119,7 @@ function runWithPython(command, args, payload, onLine) {
 
     let stdoutBuffer = "";
     let stderr = "";
+    let backendError = "";
     let settled = false;
 
     child.once("error", (error) => {
@@ -116,7 +137,11 @@ function runWithPython(command, args, payload, onLine) {
       for (const line of lines) {
         if (!line.trim()) continue;
         try {
-          onLine(JSON.parse(line));
+          const message = JSON.parse(line);
+          if (message?.type === "error" && message?.message) {
+            backendError = String(message.message);
+          }
+          onLine(message);
         } catch {
           // Ignore non-JSON diagnostic output from the backend.
         }
@@ -131,26 +156,39 @@ function runWithPython(command, args, payload, onLine) {
     child.once("close", (code) => {
       if (settled) return;
       settled = true;
-      if (code === 0) resolve();
-      else reject(new Error(stderr.trim() || `Python backend exited with code ${code}`));
+      if (code === 0) {
+        resolve();
+        return;
+      }
+
+      const fallback = compactBackendError(stderr);
+      reject(new Error(backendError || fallback || `图片处理模块退出，代码 ${code}`));
     });
 
-    child.stdin.end(JSON.stringify(payload));
+    const json = JSON.stringify(payload);
+    const encoded = Buffer.from(json, "utf8").toString("base64");
+    child.stdin.end(encoded);
   });
 }
 
 async function runBackend(payload, onLine) {
   let lastError = null;
-  for (const [command, args] of pythonCandidates()) {
+  const candidates = backendCandidates();
+
+  for (const [command, args] of candidates) {
     try {
-      await runWithPython(command, args, payload, onLine);
+      await runBackendProcess(command, args, payload, onLine);
       return;
     } catch (error) {
       lastError = error;
       if (error?.code !== "ENOENT") throw error;
     }
   }
-  throw lastError || new Error("未找到 Python。请安装 Python 3.10+ 后重试。");
+
+  if (app.isPackaged) {
+    throw lastError || new Error("安装包中的图片处理模块缺失，请重新安装最新版。");
+  }
+  throw lastError || new Error("未找到 Python。开发模式请安装 Python 3.10+ 后重试。");
 }
 
 function userDataFile(name) {
