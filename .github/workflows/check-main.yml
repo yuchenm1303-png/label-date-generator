@@ -6,6 +6,10 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: check-main
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: windows-latest
