@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import base64
 import json
 import sys
 from datetime import date, datetime, timedelta
+from io import BytesIO
 from functools import lru_cache
 from pathlib import Path
 
@@ -263,6 +265,27 @@ def render_date(
     return img
 
 
+def render_preview(payload: dict) -> None:
+    """Render a WYSIWYG preview with the exact same Pillow pipeline as export."""
+    src = Path(payload["path"]).expanduser()
+    value = parse_date(payload["date"])
+    img = render_date(
+        src,
+        value,
+        float(payload.get("xRatio", 13.9)) / 100,
+        float(payload.get("yRatio", 49.9)) / 100,
+        float(payload.get("fontRatio", 1.8)) / 100,
+        adaptive_position=bool(payload.get("adaptivePosition", True)),
+        font_family=str(payload.get("fontFamily", "simhei")),
+        bold=bool(payload.get("bold", False)),
+        letter_spacing_ratio=float(payload.get("letterSpacing", -7.0)) / 100,
+    )
+    buffer = BytesIO()
+    img.save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("ascii")
+    emit("preview-rendered", data=f"data:image/png;base64,{encoded}")
+
+
 def remove_existing_date(src: Path) -> Image.Image:
     """Create a reusable blank-date template from a historical dated image."""
     with Image.open(src) as opened:
@@ -427,6 +450,8 @@ def main() -> None:
         elif action == "analyzeTemplate":
             src = Path(payload["path"]).expanduser()
             emit("analysis", **analyze_template(src))
+        elif action == "renderPreview":
+            render_preview(payload)
         elif action == "generate":
             generate(payload)
         else:
