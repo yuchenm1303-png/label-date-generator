@@ -2,5 +2,6 @@
   "x_ratio": 0.132,
   "y_ratio": 0.492,
   "font_size_ratio": 0.043,
-  "bold": true
+  "bold": true,
+  "config_version": 2
 }
