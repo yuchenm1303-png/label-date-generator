@@ -1005,3 +1005,285 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+
+/* Readable typography pass ------------------------------------------------ */
+/* The UI originally inherited Loom-like compact type sizes. For this
+   single-purpose desktop utility we keep the hierarchy but raise the minimum
+   readable size and contrast across every control. */
+:root {
+  font-family:
+    "Segoe UI Variable Text",
+    "Microsoft YaHei UI",
+    "Segoe UI",
+    "PingFang SC",
+    sans-serif;
+  font-size: 14px;
+  --readable-muted: #747b89;
+  --readable-soft: #646b79;
+}
+
+body,
+button,
+input,
+select {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.brand h1 {
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.brand p {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--readable-muted);
+}
+
+.header-badge {
+  font-size: 11.5px;
+}
+
+.eyebrow {
+  font-size: 10px;
+  font-weight: 780;
+}
+
+.section-heading h2 {
+  font-size: 21px;
+}
+
+.preview-header h2 {
+  font-size: 19px;
+}
+
+.step-badge {
+  font-size: 10.5px;
+}
+
+.card-title {
+  font-size: 13.5px;
+}
+
+.picker-title-row strong {
+  font-size: 13px;
+}
+
+.picker-description {
+  font-size: 11.5px;
+  color: var(--readable-muted);
+}
+
+.picker-path {
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.status-chip {
+  font-size: 10px;
+}
+
+.secondary-button,
+.prepare-template-button,
+.segmented-control button,
+.today-button,
+.quick-date-button,
+.ghost-button,
+.automation-primary,
+.automation-secondary,
+.open-button,
+.primary-button,
+.preview-empty-action {
+  font-size: 11.5px;
+}
+
+.segmented-control button {
+  font-weight: 650;
+}
+
+.date-field > span,
+.automation-time > span,
+.automation-range > span {
+  font-size: 11px;
+  color: var(--readable-soft);
+}
+
+.date-field input {
+  font-size: 13px;
+}
+
+.automation-time input {
+  font-size: 12px;
+}
+
+.date-note,
+.position-tip,
+.automation-note {
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--readable-muted);
+}
+
+.range-heading strong {
+  font-size: 12px;
+}
+
+.range-heading div span {
+  font-size: 10.5px;
+  color: #8a909d;
+}
+
+.number-field input {
+  font-size: 11.5px;
+}
+
+.number-field span {
+  font-size: 10px;
+}
+
+.range-value-popover {
+  min-width: 46px;
+  font-size: 10.5px;
+}
+
+.automation-status {
+  font-size: 10px;
+}
+
+.automation-segment button {
+  font-size: 10.5px;
+}
+
+.history-copy strong {
+  font-size: 11.5px;
+}
+
+.history-copy span {
+  font-size: 10.5px;
+  color: #888f9c;
+}
+
+.history-badge {
+  font-size: 9.5px;
+}
+
+.empty-history {
+  font-size: 10.5px;
+}
+
+.adaptive-copy strong {
+  font-size: 11.5px;
+}
+
+.adaptive-copy span {
+  font-size: 10.5px;
+  color: #858c99;
+}
+
+.font-heading {
+  font-size: 11px;
+}
+
+.font-select-field > span,
+.bold-toggle > span {
+  font-size: 10.5px;
+}
+
+.font-select-field select,
+.bold-toggle button,
+.preset-row select,
+.preset-name-input,
+.preset-save {
+  font-size: 11px;
+}
+
+.preview-nav span {
+  font-size: 11.5px;
+}
+
+.preview-empty h3 {
+  font-size: 15px;
+}
+
+.preview-empty p {
+  font-size: 11.5px;
+}
+
+.preview-empty small {
+  font-size: 10px;
+}
+
+.preview-file span {
+  font-size: 12px;
+}
+
+.preview-file small,
+.click-hint {
+  font-size: 10.5px;
+}
+
+.action-status strong {
+  font-size: 12.5px;
+}
+
+.action-status span {
+  font-size: 10.5px;
+}
+
+.open-button,
+.primary-button {
+  font-size: 12px;
+}
+
+.toast-error {
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+/* Slightly increase control heights to keep the larger type from feeling
+   cramped rather than simply scaling text inside the old boxes. */
+.secondary-button {
+  min-height: 36px;
+}
+
+.segmented-control button {
+  height: 32px;
+}
+
+.quick-date-button {
+  height: 34px;
+}
+
+.automation-segment button {
+  height: 32px;
+}
+
+.automation-time input {
+  height: 38px;
+}
+
+.font-select-field select,
+.bold-toggle button {
+  height: 36px;
+}
+
+.preset-row select,
+.preset-name-input,
+.preset-save,
+.preset-delete {
+  height: 35px;
+}
+
+.history-row {
+  min-height: 48px;
+}
+
+@media (max-height: 760px) {
+  /* Do not shrink typography on shorter displays; allow the settings column
+     to scroll instead. Readability stays consistent at every window height. */
+  .settings-column {
+    overflow-y: auto;
+  }
+}
