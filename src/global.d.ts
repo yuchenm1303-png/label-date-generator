@@ -27,7 +27,7 @@ declare global {
       getAutomation: () => Promise<AutomationConfig>;
       installAutomation: (config: AutomationConfig) => Promise<AutomationConfig>;
       removeAutomation: () => Promise<AutomationConfig>;
-      openFolder: (path: string) => Promise<boolean>;
+      openFolder: (path: string) => Promise<{ ok: boolean; path: string }>;
       onGenerationProgress: (callback: (payload: GenerationProgress) => void) => () => void;
     };
   }
