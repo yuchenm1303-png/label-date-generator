@@ -18,7 +18,7 @@ from label_date_generator.core import (
 class CoreTests(unittest.TestCase):
     def test_date_and_folder_text(self):
         d = date(2026, 10, 1)
-        self.assertEqual(date_text(d), "2026年10月1日")
+        self.assertEqual(date_text(d), "2026 年 10 月 01 日")
         self.assertEqual(folder_name(d), "10月1日")
 
     def test_iter_dates(self):
