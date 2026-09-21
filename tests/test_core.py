@@ -42,12 +42,12 @@ class CoreTests(unittest.TestCase):
 
             blank = remove_existing_date(src)
 
-            # Date ink is removed.
-            self.assertEqual(blank.getpixel((200, 250)), (255, 255, 255))
+            # Date ink is removed using the image's local background color.
+            self.assertEqual(blank.getpixel((200, 250)), (252, 252, 252))
             # Neighboring text remains untouched.
             self.assertEqual(blank.getpixel((330, 250)), (0, 0, 0))
-            # Light background outside dark ink is not replaced by a solid block.
-            self.assertEqual(blank.getpixel((200, 240)), (252, 252, 252))
+            # Background outside the calibrated date box remains unchanged.
+            self.assertEqual(blank.getpixel((200, 235)), (252, 252, 252))
 
     def test_prepare_templates_from_dated_folder(self):
         with tempfile.TemporaryDirectory() as tmp:
