@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties, MouseEvent } from "react";
+import featherQuillIcon from "../assets/feather-quill.png";
+import { MediaIcon } from "./MediaIcon";
 import type { TemplateAnalysis, TemplateItem } from "../types";
 
 type ViewMode = "single" | "grid";
@@ -236,7 +238,7 @@ export function PreviewPanel({
             </div>
           ) : (
             <div className="preview-empty">
-              <div className="empty-icon brand-empty-icon" aria-hidden="true"><span className="brand-empty-mark" /></div>
+              <MediaIcon src={featherQuillIcon} size={72} className="brand-empty-icon" />
               <h3>先选一组配料表模板</h3>
               <p>选择包含 32 张无日期模板的文件夹，右侧会立即显示真实效果。</p>
               <button className="preview-empty-action" type="button" onClick={onChooseTemplates}>
