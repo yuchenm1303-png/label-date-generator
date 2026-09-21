@@ -1,4 +1,6 @@
 import type {
+  AutomationConfig,
+  GenerationHistoryItem,
   GenerationPayload,
   GenerationProgress,
   GenerationResult,
@@ -15,6 +17,11 @@ declare global {
       chooseOutput: () => Promise<string | null>;
       previewTemplate: (path: string) => Promise<string>;
       runGeneration: (payload: GenerationPayload) => Promise<GenerationResult>;
+      listHistory: () => Promise<GenerationHistoryItem[]>;
+      clearHistory: () => Promise<boolean>;
+      getAutomation: () => Promise<AutomationConfig>;
+      installAutomation: (config: AutomationConfig) => Promise<AutomationConfig>;
+      removeAutomation: () => Promise<AutomationConfig>;
       openFolder: (path: string) => Promise<boolean>;
       onGenerationProgress: (callback: (payload: GenerationProgress) => void) => () => void;
     };
