@@ -197,6 +197,10 @@ function outputFolderName(value) {
 
 async function recordHistory(payload, result, source = "manual") {
   const templates = await scanTemplates(payload.templateDir);
+  const requestedNames = Array.isArray(payload.templateNames) ? new Set(payload.templateNames) : null;
+  const requestedTemplates = requestedNames
+    ? templates.filter((item) => requestedNames.has(item.name))
+    : templates;
   const dates = payload.mode === "range"
     ? dateValues(payload.startDate, payload.endDate)
     : [payload.startDate];
@@ -212,15 +216,18 @@ async function recordHistory(payload, result, source = "manual") {
     } catch {
       actual = 0;
     }
-    const expected = templates.length;
+    const expected = requestedTemplates.length;
+    const scope = payload.exportScope || (source === "auto" ? "all" : "all");
     const entry = {
-      id: `${payload.outputDir}::${value}`,
+      id: `${payload.outputDir}::${value}::${scope}`,
+
       date: value,
       folder,
       expected,
       actual,
       complete: expected > 0 && actual >= expected,
       source,
+      scope,
       updatedAt: new Date().toISOString(),
     };
     const index = next.findIndex((item) => item.id === entry.id);
