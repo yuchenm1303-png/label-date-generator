@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from "electron";
 
 contextBridge.exposeInMainWorld("dateApp", {
   chooseTemplates: () => ipcRenderer.invoke("templates:choose"),
+  prepareTemplates: () => ipcRenderer.invoke("templates:prepare"),
   chooseOutput: () => ipcRenderer.invoke("output:choose"),
   previewTemplate: (path) => ipcRenderer.invoke("templates:preview", path),
   runGeneration: (payload) => ipcRenderer.invoke("generation:run", payload),
