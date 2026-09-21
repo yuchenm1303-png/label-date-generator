@@ -177,6 +177,15 @@ export default function App() {
 
   const dateCount = mode === "range" ? inclusiveDays(startDate, endDate) : 1;
   const totalImages = templates.length * dateCount;
+  const tomorrow = addDaysValue(today, 1);
+  const afterTomorrow = addDaysValue(today, 2);
+  const nextWeekEnd = addDaysValue(today, 6);
+  const quickDateSelection =
+    mode === "single" && startDate === today ? "today" :
+    mode === "single" && startDate === tomorrow ? "tomorrow" :
+    mode === "single" && startDate === afterTomorrow ? "after-tomorrow" :
+    mode === "range" && startDate === today && endDate === nextWeekEnd ? "week" :
+    "custom";
   const canGenerate = templates.length > 0 && Boolean(outputDir) && dateCount > 0 && !generating && !preparing;
   const completion = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
@@ -421,11 +430,12 @@ export default function App() {
                 </label>
               ) : null}
             </div>
-            <div className="quick-date-row">
-              <button className="quick-date-button" type="button" onClick={() => useQuickDate(0)}>今天</button>
-              <button className="quick-date-button" type="button" onClick={() => useQuickDate(1)}>明天</button>
-              <button className="quick-date-button" type="button" onClick={() => useQuickDate(2)}>后天</button>
-              <button className="quick-date-button" type="button" onClick={useNextSevenDays}>未来 7 天</button>
+            <div className={`quick-date-row quick-date-${quickDateSelection}`}>
+              <span className="quick-date-thumb" aria-hidden="true" />
+              <button className={`quick-date-button ${quickDateSelection === "today" ? "active" : ""}`} aria-pressed={quickDateSelection === "today"} type="button" onClick={() => useQuickDate(0)}>今天</button>
+              <button className={`quick-date-button ${quickDateSelection === "tomorrow" ? "active" : ""}`} aria-pressed={quickDateSelection === "tomorrow"} type="button" onClick={() => useQuickDate(1)}>明天</button>
+              <button className={`quick-date-button ${quickDateSelection === "after-tomorrow" ? "active" : ""}`} aria-pressed={quickDateSelection === "after-tomorrow"} type="button" onClick={() => useQuickDate(2)}>后天</button>
+              <button className={`quick-date-button ${quickDateSelection === "week" ? "active" : ""}`} aria-pressed={quickDateSelection === "week"} type="button" onClick={useNextSevenDays}>未来 7 天</button>
             </div>
             {mode === "range" ? <div className="date-note">将连续生成 {dateCount || 0} 天，每天包含全部 {templates.length || 0} 个模板。</div> : null}
           </div>
@@ -455,12 +465,14 @@ export default function App() {
               </label>
               <div className="automation-range">
                 <span>每天准备</span>
-                <div className="automation-segment">
+                <div className={`automation-segment horizon-${automationHorizon}`}>
+                  <span className="automation-thumb" aria-hidden="true" />
                   {[1, 2, 7].map((days) => (
                     <button
                       key={days}
                       type="button"
                       className={automationHorizon === days ? "active" : ""}
+                      aria-pressed={automationHorizon === days}
                       onClick={() => setAutomationHorizon(days)}
                     >
                       {days === 1 ? "当天" : days === 2 ? "今明两天" : "未来7天"}
