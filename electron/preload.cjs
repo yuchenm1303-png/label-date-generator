@@ -7,6 +7,11 @@ contextBridge.exposeInMainWorld("dateApp", {
   chooseOutput: () => ipcRenderer.invoke("output:choose"),
   previewTemplate: (filePath) => ipcRenderer.invoke("templates:preview", filePath),
   runGeneration: (payload) => ipcRenderer.invoke("generation:run", payload),
+  listHistory: () => ipcRenderer.invoke("history:list"),
+  clearHistory: () => ipcRenderer.invoke("history:clear"),
+  getAutomation: () => ipcRenderer.invoke("automation:get"),
+  installAutomation: (config) => ipcRenderer.invoke("automation:install", config),
+  removeAutomation: () => ipcRenderer.invoke("automation:remove"),
   openFolder: (folderPath) => ipcRenderer.invoke("folder:open", folderPath),
   onGenerationProgress: (callback) => {
     const listener = (_event, payload) => callback(payload);
