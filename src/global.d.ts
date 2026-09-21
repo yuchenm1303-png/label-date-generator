@@ -17,6 +17,7 @@ declare global {
       chooseTemplates: () => Promise<TemplateSelection | null>;
       prepareTemplates: () => Promise<TemplatePreparationResult | null>;
       chooseOutput: () => Promise<string | null>;
+      validateDirectory: (path: string) => Promise<boolean>;
       previewTemplate: (path: string) => Promise<string>;
       renderPreview: (payload: PreviewRenderPayload) => Promise<string>;
       analyzeTemplate: (path: string) => Promise<TemplateAnalysis>;
