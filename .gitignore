@@ -7,5 +7,6 @@ build/
 *.spec
 output/
 templates/
+config.json
 .DS_Store
 Thumbs.db
