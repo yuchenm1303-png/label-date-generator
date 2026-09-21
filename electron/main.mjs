@@ -282,6 +282,20 @@ function userDataFile(name) {
   return path.join(app.getPath("userData"), name);
 }
 
+function hasBrokenUnicodePath(value) {
+  return typeof value !== "string" || !value.trim() || value.includes("\uFFFD");
+}
+
+async function isExistingDirectory(value) {
+  if (hasBrokenUnicodePath(value)) return false;
+  try {
+    const stat = await fs.stat(value);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
 async function readJson(name, fallback) {
   try {
     return JSON.parse(await fs.readFile(userDataFile(name), "utf8"));
@@ -599,6 +613,10 @@ function registerIpc() {
     return result.canceled ? null : result.filePaths[0] ?? null;
   });
 
+  ipcMain.handle("path:validate-directory", async (_event, folderPath) => {
+    return isExistingDirectory(folderPath);
+  });
+
   ipcMain.handle("templates:preview", async (_event, filePath) => {
     const data = await fs.readFile(filePath);
     return `data:${mimeFor(filePath)};base64,${data.toString("base64")}`;
@@ -652,8 +670,15 @@ function registerIpc() {
   ipcMain.handle("automation:remove", async () => removeAutomation());
 
   ipcMain.handle("folder:open", async (_event, folderPath) => {
+    if (hasBrokenUnicodePath(folderPath)) {
+      throw new Error("这个文件夹路径来自旧版本，中文用户名曾被错误编码。程序已忽略该旧路径，请重新选择一次输出位置。");
+    }
+    if (!(await isExistingDirectory(folderPath))) {
+      throw new Error("这个文件夹位置已经失效或被移动。请重新选择输出位置，程序会记住新的位置。");
+    }
+
     const error = await shell.openPath(folderPath);
-    if (error) throw new Error(error);
+    if (error) throw new Error("无法打开文件夹，请重新选择输出位置。");
     return true;
   });
 }
