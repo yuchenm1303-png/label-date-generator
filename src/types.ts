@@ -9,6 +9,10 @@ export type TemplateSelection = {
   suggestedOutput: string;
 };
 
+export type TemplatePreparationResult = TemplateSelection & {
+  count: number;
+};
+
 export type GenerationPayload = {
   templateDir: string;
   outputDir: string;
