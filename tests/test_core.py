@@ -48,6 +48,37 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(days, 1)
             self.assertTrue((output / "10月1日" / "sample.png").exists())
 
+    def test_automatic_mode_can_skip_existing_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            templates = root / "templates"
+            output = root / "output"
+            templates.mkdir()
+
+            src = templates / "sample.png"
+            Image.new("RGB", (800, 400), "white").save(src)
+
+            settings = RenderSettings()
+            templates_found = list_templates(templates)
+            generate_for_dates(
+                templates_found,
+                output,
+                date(2026, 10, 1),
+                date(2026, 10, 1),
+                settings,
+            )
+
+            done, days = generate_for_dates(
+                templates_found,
+                output,
+                date(2026, 10, 1),
+                date(2026, 10, 1),
+                settings,
+                skip_existing=True,
+            )
+            self.assertEqual(done, 1)
+            self.assertEqual(days, 1)
+
 
 if __name__ == "__main__":
     unittest.main()
