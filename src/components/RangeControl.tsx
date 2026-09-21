@@ -12,14 +12,13 @@ type Props = {
 
 export function RangeControl({ label, value, min, max, step, hint, onChange }: Props) {
   const [engaged, setEngaged] = useState(false);
-  const percentage = ((value - min) / (max - min)) * 100;
+  const rawPercentage = ((value - min) / (max - min)) * 100;
+  const percentage = Math.min(100, Math.max(0, rawPercentage));
   const displayValue = Number(value.toFixed(step < 1 ? 1 : 0));
+  const rangeStyle = { "--range-value": `${percentage}%` } as CSSProperties;
 
   return (
-    <div
-      className={`range-control ${engaged ? "is-engaged" : ""}`}
-      style={{ "--range-value": `${percentage}%` } as CSSProperties}
-    >
+    <div className={`range-control ${engaged ? "is-engaged" : ""}`} style={rangeStyle}>
       <div className="range-heading">
         <div>
           <strong>{label}</strong>
@@ -34,7 +33,10 @@ export function RangeControl({ label, value, min, max, step, hint, onChange }: P
             value={displayValue}
             onFocus={() => setEngaged(true)}
             onBlur={() => setEngaged(false)}
-            onChange={(event) => onChange(Number(event.target.value))}
+            onChange={(event) => {
+              const next = Number(event.target.value);
+              if (Number.isFinite(next)) onChange(Math.min(max, Math.max(min, next)));
+            }}
           />
           <span>%</span>
         </label>
@@ -46,6 +48,7 @@ export function RangeControl({ label, value, min, max, step, hint, onChange }: P
         </div>
         <input
           className="range-input"
+          style={rangeStyle}
           type="range"
           min={min}
           max={max}
