@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import sys
 from datetime import date, datetime, timedelta
+from functools import lru_cache
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
@@ -12,7 +13,7 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
 # Calibrated from the user's existing self-operated label screenshots.
 # The rectangle covers only the old date text and leaves both neighboring
 # labels ("生产日期:" and "保质期:3天") intact.
-DATE_ERASE_BOX = (0.1305, 0.477, 0.3070, 0.530)
+DATE_ERASE_BOX = (0.1260, 0.4764, 0.3050, 0.5311)
 
 FONT_FAMILIES = {
     "simhei": {
@@ -171,11 +172,18 @@ def detect_label_box(img: Image.Image) -> tuple[int, int, int, int, float]:
     return (0, 0, width, height, 0.0)
 
 
+@lru_cache(maxsize=256)
+def detect_label_box_for_path(path_text: str) -> tuple[int, int, int, int, float]:
+    with Image.open(path_text) as opened:
+        img = opened.convert("RGB")
+    return detect_label_box(img)
+
+
 def analyze_template(src: Path) -> dict:
     with Image.open(src) as opened:
-        img = opened.convert("RGB")
-    left, top, right, bottom, confidence = detect_label_box(img)
-    width, height = img.size
+        width, height = opened.size
+    left, top, right, bottom, confidence = detect_label_box_for_path(str(src))
+
     return {
         "path": str(src),
         "width": width,
@@ -230,7 +238,7 @@ def render_date(
         img = opened.convert("RGB")
 
     if adaptive_position:
-        left, top, right, bottom, _confidence = detect_label_box(img)
+        left, top, right, bottom, _confidence = detect_label_box_for_path(str(src))
     else:
         left, top, right, bottom = 0, 0, img.width, img.height
 
@@ -260,13 +268,15 @@ def remove_existing_date(src: Path) -> Image.Image:
     with Image.open(src) as opened:
         img = opened.convert("RGB")
 
-    width, height = img.size
+    label_left, label_top, label_right, label_bottom, _confidence = detect_label_box_for_path(str(src))
+    label_width = max(1, label_right - label_left)
+    label_height = max(1, label_bottom - label_top)
     left, top, right, bottom = DATE_ERASE_BOX
     box = (
-        round(width * left),
-        round(height * top),
-        round(width * right),
-        round(height * bottom),
+        round(label_left + label_width * left),
+        round(label_top + label_height * top),
+        round(label_left + label_width * right),
+        round(label_top + label_height * bottom),
     )
 
     background = img.getpixel((box[0], box[1]))
