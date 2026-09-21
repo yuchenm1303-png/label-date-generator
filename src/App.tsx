@@ -403,7 +403,8 @@ export default function App() {
           <div className="settings-card">
             <div className="card-title-row">
               <div className="card-title"><CalendarDays size={17} /><span>生成日期</span></div>
-              <div className="segmented-control" aria-label="日期模式">
+              <div className={`segmented-control ${mode === "range" ? "is-range" : "is-single"}`} aria-label="日期模式">
+                <span className="segmented-thumb" aria-hidden="true" />
                 <button className={mode === "single" ? "active" : ""} type="button" onClick={() => setMode("single")}>单日</button>
                 <button className={mode === "range" ? "active" : ""} type="button" onClick={() => setMode("range")}>日期范围</button>
               </div>
