@@ -14,7 +14,8 @@ import { PreviewPanel } from "./components/PreviewPanel";
 import { RangeControl } from "./components/RangeControl";
 import type { GenerationProgress, GenerationResult, TemplateItem } from "./types";
 
-const DEFAULTS = { xRatio: 28.5, yRatio: 52, fontRatio: 3.5 };
+const DEFAULTS = { xRatio: 13.2, yRatio: 49.2, fontRatio: 4.3 };
+const LEGACY_DEFAULTS = { xRatio: 28.5, yRatio: 52, fontRatio: 3.5 };
 
 function localDateValue(value = new Date()) {
   const year = value.getFullYear();
@@ -26,7 +27,7 @@ function localDateValue(value = new Date()) {
 function prettyDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   if (!year || !month || !day) return value;
-  return `${year}年${month}月${day}日`;
+  return `${year} 年 ${month} 月 ${String(day).padStart(2, "0")} 日`;
 }
 
 function inclusiveDays(start: string, end: string) {
@@ -52,6 +53,7 @@ export default function App() {
   const [progress, setProgress] = useState<GenerationProgress | null>(null);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -59,9 +61,19 @@ export default function App() {
     if (!stored) return;
     try {
       const parsed = JSON.parse(stored);
-      if (Number.isFinite(parsed.xRatio)) setXRatio(parsed.xRatio);
-      if (Number.isFinite(parsed.yRatio)) setYRatio(parsed.yRatio);
-      if (Number.isFinite(parsed.fontRatio)) setFontRatio(parsed.fontRatio);
+      const isLegacyDefault =
+        parsed.xRatio === LEGACY_DEFAULTS.xRatio &&
+        parsed.yRatio === LEGACY_DEFAULTS.yRatio &&
+        parsed.fontRatio === LEGACY_DEFAULTS.fontRatio;
+      if (isLegacyDefault) {
+        setXRatio(DEFAULTS.xRatio);
+        setYRatio(DEFAULTS.yRatio);
+        setFontRatio(DEFAULTS.fontRatio);
+      } else {
+        if (Number.isFinite(parsed.xRatio)) setXRatio(parsed.xRatio);
+        if (Number.isFinite(parsed.yRatio)) setYRatio(parsed.yRatio);
+        if (Number.isFinite(parsed.fontRatio)) setFontRatio(parsed.fontRatio);
+      }
     } catch {
       // Keep defaults when an older local value is malformed.
     }
@@ -94,7 +106,7 @@ export default function App() {
 
   const dateCount = mode === "range" ? inclusiveDays(startDate, endDate) : 1;
   const totalImages = templates.length * dateCount;
-  const canGenerate = templates.length > 0 && Boolean(outputDir) && dateCount > 0 && !generating;
+  const canGenerate = templates.length > 0 && Boolean(outputDir) && dateCount > 0 && !generating && !preparing;
   const completion = progress && progress.total > 0 ? Math.round((progress.done / progress.total) * 100) : 0;
 
   const summary = useMemo(() => {
@@ -114,6 +126,28 @@ export default function App() {
     setResult(null);
     if (!outputDir) setOutputDir(selection.suggestedOutput);
     if (selection.templates.length === 0) setError("这个文件夹里没有找到可用的图片模板。");
+  }
+
+  async function prepareTemplates() {
+    if (preparing) return;
+    setPreparing(true);
+    setError("");
+    setResult(null);
+    try {
+      const selection = await window.dateApp.prepareTemplates();
+      if (!selection) return;
+      setTemplateDir(selection.dir);
+      setTemplates(selection.templates);
+      setSelectedIndex(0);
+      setOutputDir(selection.suggestedOutput);
+      setXRatio(DEFAULTS.xRatio);
+      setYRatio(DEFAULTS.yRatio);
+      setFontRatio(DEFAULTS.fontRatio);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setPreparing(false);
+    }
   }
 
   async function chooseOutput() {
@@ -177,20 +211,28 @@ export default function App() {
               <span className="eyebrow">WORKFLOW</span>
               <h2>生成设置</h2>
             </div>
-            <span className="step-badge">3 步完成</span>
+            <span className="step-badge">模板一次准备 · 日常 3 步</span>
           </div>
 
           <div className="settings-card file-card">
             <div className="card-title"><Layers3 size={17} /><span>模板与输出</span></div>
             <FilePickerCard
               title="模板文件夹"
-              description="选择存放全部配料表原图的文件夹"
+              description="选择32张无日期模板；生成后的文件名保持产品名不变"
               path={templateDir}
               actionLabel={templateDir ? "更换" : "选择"}
               meta={templates.length ? `${templates.length} 张` : undefined}
               ready={templates.length > 0}
               onChoose={() => void chooseTemplates()}
             />
+            <button
+              className="secondary-button prepare-template-button"
+              type="button"
+              disabled={preparing || generating}
+              onClick={() => void prepareTemplates()}
+            >
+              {preparing ? "正在生成无日期模板…" : "没有无日期模板？从历史成品一键生成"}
+            </button>
             <div className="row-divider" />
             <FilePickerCard
               title="输出位置"
