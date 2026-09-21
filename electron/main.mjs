@@ -149,6 +149,20 @@ async function runBackend(payload, onLine) {
 }
 
 app.whenReady().then(() => {
+  ipcMain.handle("templates:scan", async (_event, dir) => {
+    if (!dir || typeof dir !== "string") return null;
+    try {
+      const templates = await scanTemplates(dir);
+      return {
+        dir,
+        templates,
+        suggestedOutput: path.join(path.dirname(dir), "日期生成结果"),
+      };
+    } catch {
+      return null;
+    }
+  });
+
   ipcMain.handle("templates:choose", async () => {
     const result = await dialog.showOpenDialog({
       title: "选择配料表模板文件夹",
