@@ -353,6 +353,10 @@ async function runAutomaticGeneration() {
     xRatio: config.xRatio ?? 15.1,
     yRatio: config.yRatio ?? 50.3,
     fontRatio: config.fontRatio ?? 2.6,
+    adaptivePosition: config.adaptivePosition ?? true,
+    fontFamily: config.fontFamily ?? "simhei",
+    bold: config.bold ?? false,
+    letterSpacing: config.letterSpacing ?? 0,
     skipExisting: true,
   };
 
@@ -458,6 +462,18 @@ function registerIpc() {
   ipcMain.handle("templates:preview", async (_event, filePath) => {
     const data = await fs.readFile(filePath);
     return `data:${mimeFor(filePath)};base64,${data.toString("base64")}`;
+  });
+
+  ipcMain.handle("templates:analyze", async (_event, filePath) => {
+    let analysis = null;
+    await runBackend(
+      { action: "analyzeTemplate", path: filePath },
+      (message) => {
+        if (message.type === "analysis") analysis = message;
+      },
+    );
+    if (!analysis) throw new Error("模板自适应分析没有返回结果。");
+    return analysis;
   });
 
   ipcMain.handle("generation:run", async (event, payload) => {
