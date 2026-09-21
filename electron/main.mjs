@@ -19,6 +19,9 @@ function createWindow() {
     minHeight: 700,
     backgroundColor: "#f6f7fb",
     title: "配料表日期生成器",
+    icon: app.isPackaged
+      ? path.join(process.resourcesPath, "feather-quill.png")
+      : path.join(ROOT, "build", "icon.png"),
     titleBarStyle: "hidden",
     titleBarOverlay: {
       color: "#ffffff",
