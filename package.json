@@ -9,7 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "start": "npm run build && electron .",
     "build:backend": "python -m PyInstaller --noconfirm --clean --onefile --name date-backend --distpath backend-dist --workpath backend-build --specpath backend-spec date_backend.py",
-    "package:win": "npm run build && npm run build:backend && electron-builder --win nsis --x64 --publish never"
+    "package:win": "npm run build && npm run build:backend && npm run build:icon && electron-builder --win nsis --x64 --publish never",
+    "build:icon": "python prepare_icon.py"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -47,7 +48,7 @@
         "to": "date-backend.exe"
       },
       {
-        "from": "build/icon.png",
+        "from": "build/icon-normalized.png",
         "to": "feather-quill.png"
       }
     ],
@@ -62,13 +63,15 @@
         }
       ],
       "requestedExecutionLevel": "asInvoker",
-      "icon": "build/icon.png"
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
     }
   }
 }
