@@ -9,10 +9,12 @@ from PIL import Image, ImageDraw, ImageFont
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
 
+# Calibrated from the user's existing self-operated label screenshots.
+DATE_ERASE_BOX = (0.130, 0.475, 0.315, 0.535)
+
 
 @dataclass(frozen=True)
 class RenderSettings:
-    # Defaults calibrated from the user's current self-operated label screenshots.
     x_ratio: float = 0.132
     y_ratio: float = 0.492
     font_size_ratio: float = 0.043
@@ -53,7 +55,6 @@ def iter_dates(start: date, end: date | None = None) -> Iterable[date]:
 
 
 def find_chinese_font(bold: bool = False) -> str | None:
-    # The source RTF uses 黑体 + bold for the production-date line.
     candidates = (
         [
             r"C:\Windows\Fonts\simhei.ttf",
@@ -99,6 +100,23 @@ def render_date(src: Path, value: date, settings: RenderSettings) -> Image.Image
     return img
 
 
+def remove_existing_date(src: Path) -> Image.Image:
+    """Create a blank-date template from one dated self-operated label image."""
+    with Image.open(src) as opened:
+        img = opened.convert("RGB")
+
+    width, height = img.size
+    left, top, right, bottom = DATE_ERASE_BOX
+    box = (
+        round(width * left),
+        round(height * top),
+        round(width * right),
+        round(height * bottom),
+    )
+    ImageDraw.Draw(img).rectangle(box, fill=(255, 255, 255))
+    return img
+
+
 def save_rendered(img: Image.Image, dst: Path) -> None:
     dst.parent.mkdir(parents=True, exist_ok=True)
     ext = dst.suffix.lower()
@@ -108,6 +126,36 @@ def save_rendered(img: Image.Image, dst: Path) -> None:
         img.save(dst, quality=95)
     else:
         img.save(dst)
+
+
+def prepare_templates_from_dated_folder(
+    source_dir: Path,
+    destination_dir: Path,
+    *,
+    overwrite: bool = False,
+    progress=None,
+) -> int:
+    """Turn a dated result folder into reusable blank-date image templates."""
+    sources = list_templates(source_dir)
+    if not sources:
+        raise ValueError("所选历史成品文件夹中没有找到图片。")
+
+    destination_dir.mkdir(parents=True, exist_ok=True)
+    total = len(sources)
+    done = 0
+
+    for src in sources:
+        dst = destination_dir / src.name
+        if dst.exists() and not overwrite:
+            raise FileExistsError(f"无日期模板已存在：{dst}")
+
+        img = remove_existing_date(src)
+        save_rendered(img, dst)
+        done += 1
+        if progress is not None:
+            progress(done, total, src)
+
+    return done
 
 
 def generate_for_dates(
