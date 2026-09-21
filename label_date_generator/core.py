@@ -115,23 +115,33 @@ def generate_for_dates(
     settings: RenderSettings,
     *,
     overwrite: bool = False,
+    skip_existing: bool = False,
     progress=None,
 ) -> tuple[int, int]:
     dates = list(iter_dates(start, end))
     done = 0
+    total = len(dates) * len(templates)
 
     for d in dates:
         target = output_dir / folder_name(d)
         target.mkdir(parents=True, exist_ok=True)
         for src in templates:
             dst = target / src.name
-            if dst.exists() and not overwrite:
-                raise FileExistsError(f"输出文件已存在：{dst}")
+            if dst.exists():
+                if overwrite:
+                    pass
+                elif skip_existing:
+                    done += 1
+                    if progress is not None:
+                        progress(done, total, d, src)
+                    continue
+                else:
+                    raise FileExistsError(f"输出文件已存在：{dst}")
 
             img = render_date(src, d, settings)
             save_rendered(img, dst)
             done += 1
             if progress is not None:
-                progress(done, len(dates) * len(templates), d, src)
+                progress(done, total, d, src)
 
     return done, len(dates)
