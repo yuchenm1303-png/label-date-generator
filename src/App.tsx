@@ -178,16 +178,29 @@ export default function App() {
         }
         if (parsed.mode === "single" || parsed.mode === "range") setMode(parsed.mode);
         if (parsed.viewMode === "single" || parsed.viewMode === "grid") setViewMode(parsed.viewMode);
-        if (typeof parsed.outputDir === "string") setOutputDir(parsed.outputDir);
 
+        let restoredTemplates = null;
         if (typeof parsed.templateDir === "string" && parsed.templateDir && window.dateApp) {
-          const restored = await window.dateApp.scanTemplates(parsed.templateDir);
-          if (!cancelled && restored?.templates?.length) {
-            setTemplateDir(restored.dir);
-            setTemplates(restored.templates);
-            setSelectedTemplateNames(restored.templates.map((item) => item.name));
+          restoredTemplates = await window.dateApp.scanTemplates(parsed.templateDir);
+          if (!cancelled && restoredTemplates?.templates?.length) {
+            setTemplateDir(restoredTemplates.dir);
+            setTemplates(restoredTemplates.templates);
+            setSelectedTemplateNames(restoredTemplates.templates.map((item) => item.name));
             setSelectedIndex(0);
           }
+        }
+
+        if (typeof parsed.outputDir === "string" && parsed.outputDir && window.dateApp) {
+          const outputValid = await window.dateApp.validateDirectory(parsed.outputDir);
+          if (!cancelled && outputValid) {
+            setOutputDir(parsed.outputDir);
+          } else if (!cancelled && restoredTemplates?.suggestedOutput) {
+            // Old versions could persist mojibake paths when the Windows user
+            // name contained Chinese characters. Never reuse a broken path.
+            setOutputDir(restoredTemplates.suggestedOutput);
+          }
+        } else if (!cancelled && restoredTemplates?.suggestedOutput) {
+          setOutputDir(restoredTemplates.suggestedOutput);
         }
       } catch {
         // Keep safe defaults when an older local value is malformed.
