@@ -48,6 +48,18 @@ export type GenerationPayload = {
   exportScope?: "current" | "selected" | "all";
 };
 
+export type PreviewRenderPayload = {
+  path: string;
+  date: string;
+  xRatio: number;
+  yRatio: number;
+  fontRatio: number;
+  adaptivePosition: boolean;
+  fontFamily: FontFamily;
+  bold: boolean;
+  letterSpacing: number;
+};
+
 export type GenerationProgress = {
   type: "progress";
   done: number;
