@@ -8,23 +8,38 @@ import {
   Layers3,
   Play,
   RotateCcw,
+  Save,
+  ScanLine,
   ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   Trash2,
+  Type,
 } from "lucide-react";
 import { FilePickerCard } from "./components/FilePickerCard";
 import { PreviewPanel } from "./components/PreviewPanel";
 import { RangeControl } from "./components/RangeControl";
 import type {
   AutomationConfig,
+  FontFamily,
   GenerationHistoryItem,
   GenerationProgress,
   GenerationResult,
+  ParameterPreset,
+  TemplateAnalysis,
   TemplateItem,
 } from "./types";
 
-const DEFAULTS = { xRatio: 15.1, yRatio: 50.3, fontRatio: 2.6 };
+const DEFAULTS = {
+  xRatio: 15.1,
+  yRatio: 50.3,
+  fontRatio: 2.6,
+  adaptivePosition: true,
+  fontFamily: "simhei" as FontFamily,
+  bold: false,
+  letterSpacing: 0,
+};
+
 const LEGACY_PRESETS = [
   { xRatio: 28.5, yRatio: 52, fontRatio: 3.5 },
   { xRatio: 13.2, yRatio: 49.2, fontRatio: 4.3 },
@@ -57,6 +72,10 @@ function inclusiveDays(start: string, end: string) {
   return Number.isFinite(diff) && diff >= 0 ? diff + 1 : 0;
 }
 
+function isFontFamily(value: unknown): value is FontFamily {
+  return value === "simhei" || value === "msyh" || value === "simsun";
+}
+
 export default function App() {
   const today = localDateValue();
   const [templateDir, setTemplateDir] = useState("");
@@ -64,12 +83,19 @@ export default function App() {
   const [templates, setTemplates] = useState<TemplateItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [previewData, setPreviewData] = useState("");
+  const [analysis, setAnalysis] = useState<TemplateAnalysis | null>(null);
   const [mode, setMode] = useState<"single" | "range">("single");
   const [startDate, setStartDate] = useState(today);
   const [endDate, setEndDate] = useState(today);
   const [xRatio, setXRatio] = useState(DEFAULTS.xRatio);
   const [yRatio, setYRatio] = useState(DEFAULTS.yRatio);
   const [fontRatio, setFontRatio] = useState(DEFAULTS.fontRatio);
+  const [adaptivePosition, setAdaptivePosition] = useState(DEFAULTS.adaptivePosition);
+  const [fontFamily, setFontFamily] = useState<FontFamily>(DEFAULTS.fontFamily);
+  const [bold, setBold] = useState(DEFAULTS.bold);
+  const [letterSpacing, setLetterSpacing] = useState(DEFAULTS.letterSpacing);
+  const [presets, setPresets] = useState<ParameterPreset[]>([]);
+  const [selectedPresetId, setSelectedPresetId] = useState("");
   const [progress, setProgress] = useState<GenerationProgress | null>(null);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -87,6 +113,17 @@ export default function App() {
 
     async function restoreSettings() {
       const stored = window.localStorage.getItem("date-generator:settings");
+      const storedPresets = window.localStorage.getItem("date-generator:presets");
+
+      if (storedPresets) {
+        try {
+          const parsedPresets = JSON.parse(storedPresets);
+          if (Array.isArray(parsedPresets) && !cancelled) setPresets(parsedPresets);
+        } catch {
+          // Ignore malformed old preset data.
+        }
+      }
+
       if (!stored) {
         if (!cancelled) setSettingsReady(true);
         return;
@@ -106,6 +143,10 @@ export default function App() {
           if (Number.isFinite(parsed.fontRatio)) setFontRatio(parsed.fontRatio);
         }
 
+        if (typeof parsed.adaptivePosition === "boolean") setAdaptivePosition(parsed.adaptivePosition);
+        if (isFontFamily(parsed.fontFamily)) setFontFamily(parsed.fontFamily);
+        if (typeof parsed.bold === "boolean") setBold(parsed.bold);
+        if (Number.isFinite(parsed.letterSpacing)) setLetterSpacing(parsed.letterSpacing);
         if (parsed.mode === "single" || parsed.mode === "range") setMode(parsed.mode);
         if (typeof parsed.outputDir === "string") setOutputDir(parsed.outputDir);
 
@@ -134,9 +175,37 @@ export default function App() {
     if (!settingsReady) return;
     window.localStorage.setItem(
       "date-generator:settings",
-      JSON.stringify({ xRatio, yRatio, fontRatio, templateDir, outputDir, mode }),
+      JSON.stringify({
+        xRatio,
+        yRatio,
+        fontRatio,
+        adaptivePosition,
+        fontFamily,
+        bold,
+        letterSpacing,
+        templateDir,
+        outputDir,
+        mode,
+      }),
     );
-  }, [settingsReady, xRatio, yRatio, fontRatio, templateDir, outputDir, mode]);
+  }, [
+    settingsReady,
+    xRatio,
+    yRatio,
+    fontRatio,
+    adaptivePosition,
+    fontFamily,
+    bold,
+    letterSpacing,
+    templateDir,
+    outputDir,
+    mode,
+  ]);
+
+  useEffect(() => {
+    if (!settingsReady) return;
+    window.localStorage.setItem("date-generator:presets", JSON.stringify(presets));
+  }, [settingsReady, presets]);
 
   useEffect(() => {
     if (!window.dateApp) {
@@ -160,9 +229,13 @@ export default function App() {
     const current = templates[selectedIndex];
     if (!current) {
       setPreviewData("");
+      setAnalysis(null);
       return;
     }
+
     let cancelled = false;
+    setAnalysis(null);
+
     window.dateApp.previewTemplate(current.path)
       .then((data) => {
         if (!cancelled) setPreviewData(data);
@@ -170,10 +243,24 @@ export default function App() {
       .catch((cause) => {
         if (!cancelled) setError(cause instanceof Error ? cause.message : String(cause));
       });
+
+    if (adaptivePosition) {
+      window.dateApp.analyzeTemplate(current.path)
+        .then((nextAnalysis) => {
+          if (!cancelled) setAnalysis(nextAnalysis);
+        })
+        .catch((cause) => {
+          if (!cancelled) {
+            setAnalysis(null);
+            setError(`自适应定位分析失败，将按整张图片定位：${cause instanceof Error ? cause.message : String(cause)}`);
+          }
+        });
+    }
+
     return () => {
       cancelled = true;
     };
-  }, [templates, selectedIndex]);
+  }, [templates, selectedIndex, adaptivePosition]);
 
   const dateCount = mode === "range" ? inclusiveDays(startDate, endDate) : 1;
   const totalImages = templates.length * dateCount;
@@ -208,6 +295,7 @@ export default function App() {
     setTemplateDir(selection.dir);
     setTemplates(selection.templates);
     setSelectedIndex(0);
+    setAnalysis(null);
     setResult(null);
     if (!outputDir) setOutputDir(selection.suggestedOutput);
     if (selection.templates.length === 0) setError("这个文件夹里没有找到可用的图片模板。");
@@ -224,10 +312,9 @@ export default function App() {
       setTemplateDir(selection.dir);
       setTemplates(selection.templates);
       setSelectedIndex(0);
+      setAnalysis(null);
       setOutputDir(selection.suggestedOutput);
-      setXRatio(DEFAULTS.xRatio);
-      setYRatio(DEFAULTS.yRatio);
-      setFontRatio(DEFAULTS.fontRatio);
+      resetParameters();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -248,10 +335,15 @@ export default function App() {
     }
   }
 
-  function resetPosition() {
+  function resetParameters() {
     setXRatio(DEFAULTS.xRatio);
     setYRatio(DEFAULTS.yRatio);
     setFontRatio(DEFAULTS.fontRatio);
+    setAdaptivePosition(DEFAULTS.adaptivePosition);
+    setFontFamily(DEFAULTS.fontFamily);
+    setBold(DEFAULTS.bold);
+    setLetterSpacing(DEFAULTS.letterSpacing);
+    setSelectedPresetId("");
   }
 
   function useQuickDate(offset: number) {
@@ -265,6 +357,45 @@ export default function App() {
     setMode("range");
     setStartDate(today);
     setEndDate(addDaysValue(today, 6));
+  }
+
+  function applyPreset(id: string) {
+    setSelectedPresetId(id);
+    const preset = presets.find((item) => item.id === id);
+    if (!preset) return;
+    setXRatio(preset.xRatio);
+    setYRatio(preset.yRatio);
+    setFontRatio(preset.fontRatio);
+    setAdaptivePosition(preset.adaptivePosition);
+    setFontFamily(preset.fontFamily);
+    setBold(preset.bold);
+    setLetterSpacing(preset.letterSpacing);
+  }
+
+  function savePreset() {
+    const name = window.prompt("给这组参数起一个名字", "自营标准");
+    if (!name?.trim()) return;
+
+    const preset: ParameterPreset = {
+      id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
+      name: name.trim(),
+      xRatio,
+      yRatio,
+      fontRatio,
+      adaptivePosition,
+      fontFamily,
+      bold,
+      letterSpacing,
+    };
+
+    setPresets((items) => [preset, ...items.filter((item) => item.name !== preset.name)].slice(0, 12));
+    setSelectedPresetId(preset.id);
+  }
+
+  function deletePreset() {
+    if (!selectedPresetId) return;
+    setPresets((items) => items.filter((item) => item.id !== selectedPresetId));
+    setSelectedPresetId("");
   }
 
   async function refreshHistory() {
@@ -299,6 +430,10 @@ export default function App() {
         xRatio,
         yRatio,
         fontRatio,
+        adaptivePosition,
+        fontFamily,
+        bold,
+        letterSpacing,
       };
       const saved = await window.dateApp.installAutomation(config);
       setAutomationEnabled(Boolean(saved.enabled));
@@ -345,6 +480,10 @@ export default function App() {
         xRatio,
         yRatio,
         fontRatio,
+        adaptivePosition,
+        fontFamily,
+        bold,
+        letterSpacing,
       });
       setResult(finalResult);
       await refreshHistory();
@@ -363,7 +502,7 @@ export default function App() {
           <div className="brand-mark"><Sparkles size={18} /></div>
           <div>
             <h1>配料表日期生成器</h1>
-            <p>批量生成 · 精准预览 · 原图不覆盖</p>
+            <p>批量生成 · 自适应定位 · 原图不覆盖</p>
           </div>
         </div>
         <div className="header-badge"><span /> 本地处理</div>
@@ -442,13 +581,66 @@ export default function App() {
 
           <div className="settings-card controls-card">
             <div className="card-title-row">
-              <div className="card-title"><SlidersHorizontal size={17} /><span>日期位置</span></div>
-              <button className="ghost-button" type="button" onClick={resetPosition}><RotateCcw size={13} /> 重置</button>
+              <div className="card-title"><SlidersHorizontal size={17} /><span>定位与字体</span></div>
+              <button className="ghost-button" type="button" onClick={resetParameters}><RotateCcw size={13} /> 重置</button>
             </div>
-            <RangeControl label="水平位置" hint="图片宽度" value={xRatio} min={0} max={90} step={0.5} onChange={setXRatio} />
-            <RangeControl label="垂直位置" hint="图片高度" value={yRatio} min={0} max={95} step={0.5} onChange={setYRatio} />
-            <RangeControl label="日期字号" hint="相对图片高度" value={fontRatio} min={1.5} max={8} step={0.1} onChange={setFontRatio} />
-            <div className="position-tip">也可以直接点击右侧预览图上的目标位置，自动设置 X / Y。</div>
+
+            <div className="adaptive-row">
+              <div className="adaptive-copy">
+                <div className="adaptive-icon"><ScanLine size={15} /></div>
+                <div>
+                  <strong>自适应每张模板</strong>
+                  <span>识别标签外框，按标签区域计算坐标与字号</span>
+                </div>
+              </div>
+              <button
+                className={`switch-button ${adaptivePosition ? "on" : ""}`}
+                type="button"
+                role="switch"
+                aria-checked={adaptivePosition}
+                onClick={() => setAdaptivePosition((value) => !value)}
+              >
+                <span />
+              </button>
+            </div>
+
+            <RangeControl label="水平位置" hint={adaptivePosition ? "标签宽度" : "图片宽度"} value={xRatio} min={0} max={90} step={0.1} onChange={setXRatio} />
+            <RangeControl label="垂直位置" hint={adaptivePosition ? "标签高度" : "图片高度"} value={yRatio} min={0} max={95} step={0.1} onChange={setYRatio} />
+            <RangeControl label="日期字号" hint={adaptivePosition ? "相对标签高度" : "相对图片高度"} value={fontRatio} min={1.2} max={6} step={0.1} onChange={setFontRatio} />
+
+            <div className="font-divider" />
+            <div className="font-heading"><Type size={14} /><span>字体样式</span></div>
+            <div className="font-grid">
+              <label className="font-select-field">
+                <span>字体</span>
+                <select value={fontFamily} onChange={(event) => setFontFamily(event.target.value as FontFamily)}>
+                  <option value="simhei">黑体</option>
+                  <option value="msyh">微软雅黑</option>
+                  <option value="simsun">宋体</option>
+                </select>
+              </label>
+              <label className="bold-toggle">
+                <span>字重</span>
+                <button className={bold ? "active" : ""} type="button" onClick={() => setBold((value) => !value)}>
+                  {bold ? "粗体" : "常规"}
+                </button>
+              </label>
+            </div>
+            <RangeControl label="字间距" hint="相对字号" value={letterSpacing} min={-10} max={40} step={1} onChange={setLetterSpacing} />
+
+            <div className="preset-row">
+              <select value={selectedPresetId} onChange={(event) => applyPreset(event.target.value)}>
+                <option value="">参数方案</option>
+                {presets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}
+              </select>
+              <button className="preset-save" type="button" onClick={savePreset}><Save size={13} /> 保存方案</button>
+              {selectedPresetId ? (
+                <button className="preset-delete" type="button" onClick={deletePreset} aria-label="删除当前参数方案"><Trash2 size={13} /></button>
+              ) : null}
+            </div>
+            <div className="position-tip">
+              参数会自动保存。开启自适应后，同一组参数会基于每张图片自己的标签外框重新换算，减少尺寸差异造成的偏移。
+            </div>
           </div>
 
           <div className="settings-card automation-card">
@@ -498,7 +690,7 @@ export default function App() {
               ) : null}
             </div>
             <div className="automation-note">
-              到点自动生成；电脑当时未开机时，下次登录会自动补跑。已存在的图片会跳过，只补缺失文件。
+              到点自动生成；电脑当时未开机时，下次登录会自动补跑。自动任务会使用当前自适应与字体参数。
             </div>
           </div>
 
@@ -541,6 +733,11 @@ export default function App() {
           xRatio={xRatio}
           yRatio={yRatio}
           fontRatio={fontRatio}
+          adaptivePosition={adaptivePosition}
+          analysis={analysis}
+          fontFamily={fontFamily}
+          bold={bold}
+          letterSpacing={letterSpacing}
           onPrevious={() => setSelectedIndex((index) => (index - 1 + templates.length) % templates.length)}
           onNext={() => setSelectedIndex((index) => (index + 1) % templates.length)}
           onPickPosition={(x, y) => { setXRatio(Number(x.toFixed(1))); setYRatio(Number(y.toFixed(1))); }}
