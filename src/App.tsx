@@ -239,6 +239,12 @@ export default function App() {
   }, [settingsReady, presets]);
 
   useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(""), 8000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
+
+  useEffect(() => {
     if (!window.dateApp) {
       setError("桌面桥接没有加载成功。请关闭当前窗口并重新运行 npm run dev；如果仍然出现，请查看启动终端里的 preload failed 信息。");
       return;
