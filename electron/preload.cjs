@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld("dateApp", {
   prepareTemplates: () => ipcRenderer.invoke("templates:prepare"),
   chooseOutput: () => ipcRenderer.invoke("output:choose"),
   previewTemplate: (filePath) => ipcRenderer.invoke("templates:preview", filePath),
+  analyzeTemplate: (filePath) => ipcRenderer.invoke("templates:analyze", filePath),
   runGeneration: (payload) => ipcRenderer.invoke("generation:run", payload),
   listHistory: () => ipcRenderer.invoke("history:list"),
   clearHistory: () => ipcRenderer.invoke("history:clear"),
