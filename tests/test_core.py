@@ -3,7 +3,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from label_date_generator.core import (
     RenderSettings,
@@ -12,6 +12,8 @@ from label_date_generator.core import (
     generate_for_dates,
     iter_dates,
     list_templates,
+    prepare_templates_from_dated_folder,
+    remove_existing_date,
 )
 
 
@@ -25,6 +27,36 @@ class CoreTests(unittest.TestCase):
         values = list(iter_dates(date(2026, 10, 1), date(2026, 10, 3)))
         self.assertEqual(len(values), 3)
         self.assertEqual(values[-1], date(2026, 10, 3))
+
+    def test_remove_existing_date_only_blanks_calibrated_region(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            src = Path(tmp) / "dated.png"
+            img = Image.new("RGB", (1000, 500), "white")
+            draw = ImageDraw.Draw(img)
+            draw.rectangle((140, 245, 300, 255), fill="black")
+            draw.rectangle((600, 245, 650, 255), fill="black")
+            img.save(src)
+
+            blank = remove_existing_date(src)
+            self.assertEqual(blank.getpixel((200, 250)), (255, 255, 255))
+            self.assertEqual(blank.getpixel((625, 250)), (0, 0, 0))
+
+    def test_prepare_templates_from_dated_folder(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "10月1日"
+            dest = root / "无日期模板"
+            source.mkdir()
+
+            for i in range(3):
+                img = Image.new("RGB", (1000, 500), "white")
+                ImageDraw.Draw(img).rectangle((150, 245, 280, 255), fill="black")
+                img.save(source / f"{i}.png")
+
+            count = prepare_templates_from_dated_folder(source, dest)
+            self.assertEqual(count, 3)
+            self.assertEqual(len(list_templates(dest)), 3)
+            self.assertEqual(Image.open(dest / "0.png").convert("RGB").getpixel((200, 250)), (255, 255, 255))
 
     def test_generate_single_day(self):
         with tempfile.TemporaryDirectory() as tmp:
