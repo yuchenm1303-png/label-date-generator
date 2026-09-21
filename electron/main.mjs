@@ -212,7 +212,10 @@ async function recordHistory(payload, result, source = "manual") {
     const folder = path.join(payload.outputDir, outputFolderName(value));
     let actual = 0;
     try {
-      actual = (await scanTemplates(folder)).length;
+      const generated = await scanTemplates(folder);
+      actual = requestedNames
+        ? generated.filter((item) => requestedNames.has(item.name)).length
+        : generated.length;
     } catch {
       actual = 0;
     }
