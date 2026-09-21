@@ -5,7 +5,7 @@ import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
 
@@ -14,26 +14,62 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
 # labels ("生产日期:" and "保质期:3天") intact.
 DATE_ERASE_BOX = (0.1305, 0.477, 0.3070, 0.530)
 
+FONT_FAMILIES = {
+    "simhei": {
+        "normal": [
+            r"C:\Windows\Fonts\simhei.ttf",
+            r"C:\Windows\Fonts\msyh.ttc",
+        ],
+        "bold": [
+            r"C:\Windows\Fonts\simhei.ttf",
+            r"C:\Windows\Fonts\msyhbd.ttc",
+        ],
+    },
+    "msyh": {
+        "normal": [
+            r"C:\Windows\Fonts\msyh.ttc",
+            r"C:\Windows\Fonts\simhei.ttf",
+        ],
+        "bold": [
+            r"C:\Windows\Fonts\msyhbd.ttc",
+            r"C:\Windows\Fonts\simhei.ttf",
+        ],
+    },
+    "simsun": {
+        "normal": [
+            r"C:\Windows\Fonts\simsun.ttc",
+            r"C:\Windows\Fonts\simhei.ttf",
+        ],
+        "bold": [
+            r"C:\Windows\Fonts\simsunb.ttf",
+            r"C:\Windows\Fonts\simhei.ttf",
+        ],
+    },
+}
+
+FALLBACK_FONTS = [
+    "/System/Library/Fonts/PingFang.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+]
+
 
 def emit(kind: str, **payload) -> None:
     print(json.dumps({"type": kind, **payload}, ensure_ascii=False), flush=True)
 
 
-def find_chinese_font() -> str | None:
-    candidates = [
-        r"C:\Windows\Fonts\simhei.ttf",
-        r"C:\Windows\Fonts\msyhbd.ttc",
-        r"C:\Windows\Fonts\msyh.ttc",
-        r"C:\Windows\Fonts\simsun.ttc",
-        "/System/Library/Fonts/PingFang.ttc",
-        "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
-        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-    ]
+def find_chinese_font(font_family: str = "simhei", bold: bool = False) -> str | None:
+    family = FONT_FAMILIES.get(font_family, FONT_FAMILIES["simhei"])
+    candidates = family["bold" if bold else "normal"] + FALLBACK_FONTS
     return next((font for font in candidates if Path(font).exists()), None)
 
 
-def get_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    font_path = find_chinese_font()
+def get_font(
+    size: int,
+    font_family: str = "simhei",
+    bold: bool = False,
+) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+    font_path = find_chinese_font(font_family=font_family, bold=bold)
     if font_path:
         return ImageFont.truetype(font_path, max(8, size))
     return ImageFont.load_default()
@@ -66,14 +102,156 @@ def product_output_name(src: Path) -> str:
     return src.name
 
 
-def render_date(src: Path, value: date, x_ratio: float, y_ratio: float, font_ratio: float) -> Image.Image:
+def _dark_count_in_row(gray: Image.Image, y: int, threshold: int = 175) -> int:
+    return sum(1 for value in gray.crop((0, y, gray.width, y + 1)).getdata() if value < threshold)
+
+
+def _dark_count_in_col(gray: Image.Image, x: int, threshold: int = 175) -> int:
+    return sum(1 for value in gray.crop((x, 0, x + 1, gray.height)).getdata() if value < threshold)
+
+
+def detect_label_box(img: Image.Image) -> tuple[int, int, int, int, float]:
+    """
+    Detect the outer label/document rectangle without OCR.
+
+    The labels in this project have a thin dark outer border. We score rows and
+    columns near the four image edges and choose the strongest long horizontal/
+    vertical lines. If the border is not reliable, fall back to a padded dark
+    content bounding box, then finally to the full image.
+    """
+    gray = ImageOps.grayscale(img)
+    width, height = gray.size
+    if width < 40 or height < 40:
+        return (0, 0, width, height, 0.0)
+
+    top_limit = max(2, int(height * 0.32))
+    bottom_start = min(height - 2, int(height * 0.68))
+    left_limit = max(2, int(width * 0.22))
+    right_start = min(width - 2, int(width * 0.78))
+
+    top_scores = [(y, _dark_count_in_row(gray, y)) for y in range(0, top_limit)]
+    bottom_scores = [(y, _dark_count_in_row(gray, y)) for y in range(bottom_start, height)]
+    left_scores = [(x, _dark_count_in_col(gray, x)) for x in range(0, left_limit)]
+    right_scores = [(x, _dark_count_in_col(gray, x)) for x in range(right_start, width)]
+
+    top, top_score = max(top_scores, key=lambda item: item[1])
+    bottom, bottom_score = max(bottom_scores, key=lambda item: item[1])
+    left, left_score = max(left_scores, key=lambda item: item[1])
+    right, right_score = max(right_scores, key=lambda item: item[1])
+
+    row_conf = min(top_score, bottom_score) / max(1, width)
+    col_conf = min(left_score, right_score) / max(1, height)
+    confidence = min(row_conf / 0.55, col_conf / 0.55, 1.0)
+
+    border_valid = (
+        top_score >= width * 0.55
+        and bottom_score >= width * 0.55
+        and left_score >= height * 0.55
+        and right_score >= height * 0.55
+        and right - left >= width * 0.65
+        and bottom - top >= height * 0.55
+    )
+    if border_valid:
+        return (left, top, right + 1, bottom + 1, confidence)
+
+    # Fallback: bounding box of all dark content, expanded slightly.
+    dark = gray.point(lambda p: 255 if p < 205 else 0)
+    bbox = dark.getbbox()
+    if bbox:
+        l, t, r, b = bbox
+        pad_x = max(2, round(width * 0.015))
+        pad_y = max(2, round(height * 0.015))
+        l = max(0, l - pad_x)
+        t = max(0, t - pad_y)
+        r = min(width, r + pad_x)
+        b = min(height, b + pad_y)
+        if r - l >= width * 0.55 and b - t >= height * 0.45:
+            return (l, t, r, b, 0.35)
+
+    return (0, 0, width, height, 0.0)
+
+
+def analyze_template(src: Path) -> dict:
     with Image.open(src) as opened:
         img = opened.convert("RGB")
+    left, top, right, bottom, confidence = detect_label_box(img)
+    width, height = img.size
+    return {
+        "path": str(src),
+        "width": width,
+        "height": height,
+        "labelBox": {
+            "left": left / width,
+            "top": top / height,
+            "right": right / width,
+            "bottom": bottom / height,
+        },
+        "confidence": round(confidence, 3),
+    }
+
+
+def draw_text_with_spacing(
+    draw: ImageDraw.ImageDraw,
+    position: tuple[int, int],
+    text: str,
+    font,
+    fill: tuple[int, int, int],
+    spacing_px: float,
+) -> None:
+    x, y = position
+    if abs(spacing_px) < 0.01:
+        draw.text((x, y), text, fill=fill, font=font, anchor="lm")
+        return
+
+    cursor = float(x)
+    for char in text:
+        draw.text((round(cursor), y), char, fill=fill, font=font, anchor="lm")
+        try:
+            advance = float(draw.textlength(char, font=font))
+        except Exception:
+            bbox = draw.textbbox((0, 0), char, font=font)
+            advance = float(bbox[2] - bbox[0])
+        cursor += advance + spacing_px
+
+
+def render_date(
+    src: Path,
+    value: date,
+    x_ratio: float,
+    y_ratio: float,
+    font_ratio: float,
+    *,
+    adaptive_position: bool = True,
+    font_family: str = "simhei",
+    bold: bool = False,
+    letter_spacing_ratio: float = 0.0,
+) -> Image.Image:
+    with Image.open(src) as opened:
+        img = opened.convert("RGB")
+
+    if adaptive_position:
+        left, top, right, bottom, _confidence = detect_label_box(img)
+    else:
+        left, top, right, bottom = 0, 0, img.width, img.height
+
+    label_width = max(1, right - left)
+    label_height = max(1, bottom - top)
+
+    font_size = max(8, round(label_height * font_ratio))
+    font = get_font(font_size, font_family=font_family, bold=bold)
+    x = round(left + label_width * x_ratio)
+    y = round(top + label_height * y_ratio)
+    spacing_px = font_size * letter_spacing_ratio
+
     draw = ImageDraw.Draw(img)
-    font = get_font(round(img.height * font_ratio))
-    x = round(img.width * x_ratio)
-    y = round(img.height * y_ratio)
-    draw.text((x, y), date_text(value), fill=(0, 0, 0), font=font, anchor="lm")
+    draw_text_with_spacing(
+        draw,
+        (x, y),
+        date_text(value),
+        font,
+        (0, 0, 0),
+        spacing_px,
+    )
     return img
 
 
@@ -91,8 +269,6 @@ def remove_existing_date(src: Path) -> Image.Image:
         round(height * bottom),
     )
 
-    # Use the image's own nearby background instead of hard-coded white.
-    # This prevents a visible white block on slightly off-white source images.
     background = img.getpixel((box[0], box[1]))
     ImageDraw.Draw(img).rectangle(box, fill=background)
     return img
@@ -119,16 +295,12 @@ def prepare_templates(payload: dict) -> None:
 
     destination_dir.mkdir(parents=True, exist_ok=True)
 
-    # Avoid stale templates when regenerating from another historical day.
     for existing in list_images(destination_dir):
         existing.unlink()
 
     total = len(sources)
     for index, src in enumerate(sources, start=1):
         blank = remove_existing_date(src)
-        # Preserve the source filename exactly. Historical files are already
-        # named after their product, so every generated template/output keeps
-        # the product name and never adds a date or sequence number.
         dst = destination_dir / product_output_name(src)
         save_image(blank, dst)
         emit("prepare-progress", done=index, total=total, file=src.name)
@@ -170,6 +342,11 @@ def generate(payload: dict) -> None:
     x_ratio = float(payload.get("xRatio", 15.1)) / 100
     y_ratio = float(payload.get("yRatio", 50.3)) / 100
     font_ratio = float(payload.get("fontRatio", 2.6)) / 100
+    adaptive_position = bool(payload.get("adaptivePosition", True))
+    font_family = str(payload.get("fontFamily", "simhei"))
+    bold = bool(payload.get("bold", False))
+    letter_spacing_ratio = float(payload.get("letterSpacing", 0.0)) / 100
+
     total = len(templates) * len(values)
     done = 0
     created = 0
@@ -180,8 +357,6 @@ def generate(payload: dict) -> None:
         target = output_dir / folder_name(current_date)
         target.mkdir(parents=True, exist_ok=True)
         for src in templates:
-            # Critical rule: output filename remains exactly the product/template
-            # filename. Do not append dates, counters or other suffixes.
             dst = target / product_output_name(src)
 
             if skip_existing and dst.exists():
@@ -197,7 +372,17 @@ def generate(payload: dict) -> None:
                 )
                 continue
 
-            img = render_date(src, current_date, x_ratio, y_ratio, font_ratio)
+            img = render_date(
+                src,
+                current_date,
+                x_ratio,
+                y_ratio,
+                font_ratio,
+                adaptive_position=adaptive_position,
+                font_family=font_family,
+                bold=bold,
+                letter_spacing_ratio=letter_spacing_ratio,
+            )
             save_image(img, dst)
             created += 1
             done += 1
@@ -221,8 +406,12 @@ def main() -> None:
             raise ValueError("没有收到生成参数")
         payload = json.loads(raw)
         action = payload.get("action", "generate")
+
         if action == "prepareTemplates":
             prepare_templates(payload)
+        elif action == "analyzeTemplate":
+            src = Path(payload["path"]).expanduser()
+            emit("analysis", **analyze_template(src))
         elif action == "generate":
             generate(payload)
         else:
