@@ -63,13 +63,20 @@ class BackendTests(unittest.TestCase):
             backend = Path(__file__).resolve().parents[1] / "date_backend.py"
             completed = subprocess.run(
                 [sys.executable, str(backend)],
-                input=encoded,
-                text=True,
+                input=encoded.encode("ascii"),
                 capture_output=True,
                 check=False,
             )
 
-            self.assertEqual(completed.returncode, 0, completed.stderr)
+            stderr = completed.stderr.decode("utf-8", errors="replace")
+            self.assertEqual(completed.returncode, 0, stderr)
+            stdout = completed.stdout.decode("utf-8", errors="strict")
+            messages = [json.loads(line) for line in stdout.splitlines() if line.strip()]
+            done = next(message for message in messages if message.get("type") == "done")
+
+            self.assertIn("邹羽宸", done["outputDir"])
+            self.assertNotIn("\ufffd", done["outputDir"])
+            self.assertIn("9月21日", done["openPath"])
             self.assertTrue((output / "9月21日" / filename).exists())
 
     def test_adaptive_render_uses_label_relative_coordinates(self):
