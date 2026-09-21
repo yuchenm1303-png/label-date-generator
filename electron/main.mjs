@@ -476,6 +476,15 @@ function registerIpc() {
     return `data:${mimeFor(filePath)};base64,${data.toString("base64")}`;
   });
 
+  ipcMain.handle("templates:render-preview", async (_event, payload) => {
+    let rendered = null;
+    await runBackend({ action: "renderPreview", ...payload }, (message) => {
+      if (message.type === "preview-rendered") rendered = message.data;
+    });
+    if (!rendered) throw new Error("真实预览没有返回渲染结果。");
+    return rendered;
+  });
+
   ipcMain.handle("templates:analyze", async (_event, filePath) => {
     const cached = templateAnalysisCache.get(filePath);
     if (cached) return cached;
