@@ -624,7 +624,7 @@ export default function App() {
       <div className="window-drag-region" />
       <header className="app-header">
         <div className="brand">
-          <div className="brand-mark"><img src="./feather-quill.png" alt="" className="brand-mark-image" /></div>
+          <div className="brand-mark" aria-hidden="true"><span className="brand-mark-image" /></div>
           <div>
             <h1>配料表日期生成器</h1>
             <p>批量生成 · 自适应定位 · 原图不覆盖</p>
