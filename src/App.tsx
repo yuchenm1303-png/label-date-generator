@@ -307,6 +307,7 @@ export default function App() {
           onPrevious={() => setSelectedIndex((index) => (index - 1 + templates.length) % templates.length)}
           onNext={() => setSelectedIndex((index) => (index + 1) % templates.length)}
           onPickPosition={(x, y) => { setXRatio(Number(x.toFixed(1))); setYRatio(Number(y.toFixed(1))); }}
+          onChooseTemplates={() => void chooseTemplates()}
         />
       </main>
 
