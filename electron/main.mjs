@@ -296,6 +296,33 @@ async function isExistingDirectory(value) {
   }
 }
 
+function openDirectoryNative(folderPath) {
+  const normalized = path.normalize(folderPath);
+
+  if (process.platform === "win32") {
+    return new Promise((resolve, reject) => {
+      const explorerPath = path.join(process.env.WINDIR || "C:\\Windows", "explorer.exe");
+      const child = spawn(explorerPath, [normalized], {
+        detached: true,
+        windowsHide: true,
+        stdio: "ignore",
+        shell: false,
+      });
+
+      child.once("error", reject);
+      child.once("spawn", () => {
+        child.unref();
+        resolve(true);
+      });
+    });
+  }
+
+  return shell.openPath(normalized).then((error) => {
+    if (error) throw new Error(error);
+    return true;
+  });
+}
+
 async function readJson(name, fallback) {
   try {
     return JSON.parse(await fs.readFile(userDataFile(name), "utf8"));
@@ -671,15 +698,17 @@ function registerIpc() {
 
   ipcMain.handle("folder:open", async (_event, folderPath) => {
     if (hasBrokenUnicodePath(folderPath)) {
-      throw new Error("这个文件夹路径来自旧版本，中文用户名曾被错误编码。程序已忽略该旧路径，请重新选择一次输出位置。");
+      throw new Error("保存的路径文本已经损坏，请重新选择一次输出位置。中文用户名和中文文件夹本身是支持的。");
     }
     if (!(await isExistingDirectory(folderPath))) {
-      throw new Error("这个文件夹位置已经失效或被移动。请重新选择输出位置，程序会记住新的位置。");
+      throw new Error("这个文件夹位置不存在或已被移动，请重新选择输出位置。");
     }
 
-    const error = await shell.openPath(folderPath);
-    if (error) throw new Error("无法打开文件夹，请重新选择输出位置。");
-    return true;
+    try {
+      return await openDirectoryNative(folderPath);
+    } catch {
+      throw new Error("文件夹存在，但 Windows 资源管理器未能打开它。请重试一次。");
+    }
   });
 }
 
