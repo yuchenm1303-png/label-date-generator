@@ -24,10 +24,11 @@ import type {
   TemplateItem,
 } from "./types";
 
-const DEFAULTS = { xRatio: 15, yRatio: 50, fontRatio: 4.1 };
+const DEFAULTS = { xRatio: 15.1, yRatio: 50.3, fontRatio: 2.6 };
 const LEGACY_PRESETS = [
   { xRatio: 28.5, yRatio: 52, fontRatio: 3.5 },
   { xRatio: 13.2, yRatio: 49.2, fontRatio: 4.3 },
+  { xRatio: 15, yRatio: 50, fontRatio: 4.1 },
 ];
 
 function localDateValue(value = new Date()) {
