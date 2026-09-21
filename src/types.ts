@@ -74,6 +74,7 @@ export type GenerationResult = {
   total: number;
   dates: number;
   outputDir: string;
+  openPath?: string;
   created?: number;
   skipped?: number;
 };
