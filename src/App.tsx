@@ -15,8 +15,10 @@ import {
   Trash2,
   Type,
 } from "lucide-react";
+import featherQuillIcon from "./assets/feather-quill.png";
 import { FilePickerCard } from "./components/FilePickerCard";
 import { PreviewPanel } from "./components/PreviewPanel";
+import { MediaIcon } from "./components/MediaIcon";
 import { RangeControl } from "./components/RangeControl";
 import type {
   AutomationConfig,
@@ -624,7 +626,7 @@ export default function App() {
       <div className="window-drag-region" />
       <header className="app-header">
         <div className="brand">
-          <div className="brand-mark" aria-hidden="true"><span className="brand-mark-image" /></div>
+          <MediaIcon src={featherQuillIcon} size={50} className="brand-mark" />
           <div>
             <h1>配料表日期生成器</h1>
             <p>批量生成 · 自适应定位 · 原图不覆盖</p>
