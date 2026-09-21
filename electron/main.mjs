@@ -321,7 +321,26 @@ async function runAutomaticGeneration() {
     return { skipped: true, reason: "automation-not-configured" };
   }
 
-  const startDate = localDateValue();
+  const lockPath = userDataFile("automation.lock");
+  let lockHandle = null;
+  try {
+    try {
+      lockHandle = await fs.open(lockPath, "wx");
+    } catch {
+      try {
+        const stat = await fs.stat(lockPath);
+        if (Date.now() - stat.mtimeMs > 10 * 60 * 1000) {
+          await fs.unlink(lockPath);
+          lockHandle = await fs.open(lockPath, "wx");
+        } else {
+          return { skipped: true, reason: "automation-already-running" };
+        }
+      } catch {
+        return { skipped: true, reason: "automation-already-running" };
+      }
+    }
+
+    const startDate = localDateValue();
   const horizonDays = Math.max(1, Math.min(31, Number(config.horizonDays) || 1));
   const endDate = addDaysValue(startDate, horizonDays - 1);
   const payload = {
@@ -337,14 +356,26 @@ async function runAutomaticGeneration() {
     skipExisting: true,
   };
 
-  let finalResult = null;
-  await runBackend(payload, (message) => {
-    if (message.type === "done") finalResult = message;
-  });
-  if (!finalResult) throw new Error("自动生成没有返回完成结果。");
+    let finalResult = null;
+    await runBackend(payload, (message) => {
+      if (message.type === "done") finalResult = message;
+    });
+    if (!finalResult) throw new Error("自动生成没有返回完成结果。");
 
-  await recordHistory(payload, finalResult, "auto");
-  return finalResult;
+    await recordHistory(payload, finalResult, "auto");
+    return finalResult;
+  } finally {
+    try {
+      await lockHandle?.close();
+    } catch {
+      // Ignore lock close failures.
+    }
+    try {
+      await fs.unlink(lockPath);
+    } catch {
+      // Ignore missing lock files.
+    }
+  }
 }
 
 function notify(title, body) {
