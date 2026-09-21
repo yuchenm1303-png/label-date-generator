@@ -579,3 +579,429 @@
     transition-duration: 0.001ms !important;
   }
 }
+
+
+/* Unified control motion -------------------------------------------------- */
+/* All selectable controls now share the same restrained motion language:
+   a moving white surface, subtle compression on press, and purple focus. */
+
+:where(
+  .secondary-button,
+  .prepare-template-button,
+  .quick-date-button,
+  .today-button,
+  .ghost-button,
+  .automation-primary,
+  .automation-secondary,
+  .history-open,
+  .preview-nav button,
+  .open-button,
+  .primary-button,
+  .preview-empty-action
+):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(109, 91, 208, .12);
+}
+
+:where(
+  .secondary-button,
+  .prepare-template-button,
+  .quick-date-button,
+  .today-button,
+  .ghost-button,
+  .automation-primary,
+  .automation-secondary,
+  .history-open,
+  .preview-nav button,
+  .open-button,
+  .primary-button,
+  .preview-empty-action
+):active:not(:disabled) {
+  transform: translateY(0) scale(.975);
+  transition-duration: 90ms;
+}
+
+/* Precision range sliders ------------------------------------------------ */
+.range-control {
+  --range-value: 0%;
+  position: relative;
+}
+
+.range-heading {
+  min-height: 32px;
+}
+
+.number-field {
+  position: relative;
+  overflow: hidden;
+  border-color: #e0e2e9;
+  background: linear-gradient(180deg, #fcfcfd, #f8f9fb);
+  box-shadow: inset 0 1px rgba(255,255,255,.9);
+  transition:
+    border-color 170ms ease,
+    box-shadow 170ms ease,
+    background 170ms ease,
+    transform 150ms var(--ease);
+}
+
+.number-field:focus-within {
+  border-color: rgba(109,91,208,.36);
+  background: #fff;
+  box-shadow:
+    0 0 0 3px rgba(109,91,208,.08),
+    inset 0 1px rgba(255,255,255,.95);
+  transform: translateY(-1px);
+}
+
+.number-field input {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+}
+
+.range-track-wrap {
+  position: relative;
+  height: 31px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.range-input {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  appearance: none;
+  outline: none;
+  background: transparent;
+  cursor: grab;
+}
+
+.range-input:active {
+  cursor: grabbing;
+}
+
+.range-input::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg,
+      #7b6bdd 0%,
+      #6d5bd0 var(--range-value),
+      #e9eaf0 var(--range-value),
+      #e9eaf0 100%);
+  box-shadow:
+    inset 0 1px 1px rgba(35,39,55,.055),
+    0 1px rgba(255,255,255,.9);
+  transition: filter 160ms ease;
+}
+
+.range-input:hover::-webkit-slider-runnable-track,
+.range-control.is-engaged .range-input::-webkit-slider-runnable-track {
+  filter: saturate(1.06);
+}
+
+.range-input::-webkit-slider-thumb {
+  width: 19px;
+  height: 19px;
+  margin-top: -6.5px;
+  appearance: none;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: #6d5bd0;
+  box-shadow:
+    0 2px 7px rgba(72,57,152,.30),
+    0 0 0 1px rgba(91,73,192,.12);
+  transition:
+    transform 180ms cubic-bezier(.2,.85,.2,1.25),
+    box-shadow 180ms ease,
+    background 180ms ease;
+}
+
+.range-input:hover::-webkit-slider-thumb {
+  transform: scale(1.08);
+  background: #6552cc;
+  box-shadow:
+    0 3px 9px rgba(72,57,152,.32),
+    0 0 0 4px rgba(109,91,208,.075);
+}
+
+.range-control.is-engaged .range-input::-webkit-slider-thumb {
+  transform: scale(1.15);
+  background: #5f4cc6;
+  box-shadow:
+    0 4px 12px rgba(72,57,152,.32),
+    0 0 0 6px rgba(109,91,208,.10);
+}
+
+.range-value-popover {
+  position: absolute;
+  z-index: 4;
+  left: var(--range-value);
+  top: -25px;
+  min-width: 42px;
+  padding: 5px 7px;
+  border: 1px solid rgba(92,78,176,.16);
+  border-radius: 8px;
+  color: #fff;
+  background: linear-gradient(180deg, #7463d4, #5f4dc0);
+  box-shadow: 0 7px 18px rgba(75,61,154,.20);
+  font-size: 9px;
+  font-weight: 720;
+  line-height: 1;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 6px) scale(.94);
+  transform-origin: 50% 100%;
+  transition:
+    opacity 130ms ease,
+    transform 180ms cubic-bezier(.2,.85,.2,1.2);
+}
+
+.range-value-popover::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+  background: #5f4dc0;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.range-control:hover .range-value-popover,
+.range-control.is-engaged .range-value-popover {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+
+/* Quick date options ------------------------------------------------------ */
+.quick-date-row {
+  position: relative;
+  isolation: isolate;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 11px;
+  padding: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(225,227,234,.86);
+  border-radius: 11px;
+  background: #f1f2f6;
+  box-shadow:
+    inset 0 1px 2px rgba(38,43,60,.03),
+    0 1px rgba(255,255,255,.88);
+}
+
+.quick-date-thumb {
+  position: absolute;
+  z-index: 0;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 18px) / 4);
+  border: 1px solid rgba(217,218,227,.92);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff, #fbfbfd);
+  box-shadow:
+    0 4px 11px rgba(42,46,63,.085),
+    0 1px 3px rgba(42,46,63,.045);
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    transform 280ms cubic-bezier(.22,1,.36,1),
+    opacity 150ms ease,
+    box-shadow 180ms ease;
+  will-change: transform;
+}
+
+.quick-date-row.quick-date-tomorrow .quick-date-thumb {
+  transform: translateX(calc(100% + 4px));
+}
+
+.quick-date-row.quick-date-after-tomorrow .quick-date-thumb {
+  transform: translateX(calc(200% + 8px));
+}
+
+.quick-date-row.quick-date-week .quick-date-thumb {
+  transform: translateX(calc(300% + 12px));
+}
+
+.quick-date-row.quick-date-custom .quick-date-thumb {
+  opacity: 0;
+  transform: scale(.92);
+}
+
+.quick-date-button {
+  position: relative;
+  z-index: 1;
+  height: 31px;
+  border: 0;
+  border-radius: 8px;
+  color: #858b98;
+  background: transparent;
+  box-shadow: none;
+  font-size: 9px;
+  font-weight: 640;
+  transition:
+    color 170ms ease,
+    transform 130ms var(--ease),
+    font-weight 170ms ease;
+}
+
+.quick-date-button:hover {
+  border-color: transparent;
+  background: transparent;
+  color: #5f6573;
+  transform: none;
+}
+
+.quick-date-button.active {
+  color: #51477f;
+  font-weight: 720;
+}
+
+.quick-date-button:active {
+  transform: scale(.96);
+}
+
+/* Automation horizon options --------------------------------------------- */
+.automation-segment {
+  position: relative;
+  isolation: isolate;
+  gap: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(225,227,234,.84);
+  border-radius: 11px;
+  background: #f1f2f6;
+  box-shadow:
+    inset 0 1px 2px rgba(38,43,60,.03),
+    0 1px rgba(255,255,255,.86);
+}
+
+.automation-thumb {
+  position: absolute;
+  z-index: 0;
+  top: 3px;
+  bottom: 3px;
+  left: 3px;
+  width: calc((100% - 14px) / 3);
+  border: 1px solid rgba(217,218,227,.92);
+  border-radius: 8px;
+  background: linear-gradient(180deg, #fff, #fbfbfd);
+  box-shadow:
+    0 4px 11px rgba(42,46,63,.085),
+    0 1px 3px rgba(42,46,63,.045);
+  transform: translateX(0);
+  transition:
+    transform 280ms cubic-bezier(.22,1,.36,1),
+    box-shadow 180ms ease;
+  will-change: transform;
+}
+
+.automation-segment.horizon-2 .automation-thumb {
+  transform: translateX(calc(100% + 4px));
+}
+
+.automation-segment.horizon-7 .automation-thumb {
+  transform: translateX(calc(200% + 8px));
+}
+
+.automation-segment button {
+  position: relative;
+  z-index: 1;
+  color: #888e9a;
+  background: transparent !important;
+  box-shadow: none !important;
+  transition:
+    color 170ms ease,
+    transform 130ms var(--ease),
+    font-weight 170ms ease;
+}
+
+.automation-segment button:hover {
+  color: #626875;
+}
+
+.automation-segment button.active {
+  color: #51477f;
+  font-weight: 720;
+}
+
+.automation-segment button:active {
+  transform: scale(.96);
+}
+
+/* Date/time fields now react like the segmented controls rather than static
+   native boxes. */
+.date-field input,
+.automation-time input {
+  transition:
+    border-color 170ms ease,
+    box-shadow 170ms ease,
+    background 170ms ease,
+    transform 150ms var(--ease);
+}
+
+.date-field input:hover,
+.automation-time input:hover {
+  border-color: #d3d5df;
+  background: #fff;
+}
+
+.date-field input:focus,
+.automation-time input:focus {
+  transform: translateY(-1px);
+  border-color: rgba(109,91,208,.38);
+  box-shadow: 0 0 0 3px rgba(109,91,208,.09);
+}
+
+/* Button surfaces --------------------------------------------------------- */
+.secondary-button,
+.automation-secondary,
+.open-button {
+  box-shadow: inset 0 1px rgba(255,255,255,.9);
+}
+
+.secondary-button:hover:not(:disabled),
+.automation-secondary:hover:not(:disabled),
+.open-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow:
+    0 6px 15px rgba(42,46,63,.065),
+    inset 0 1px rgba(255,255,255,.94);
+}
+
+.ghost-button {
+  transition:
+    color 150ms ease,
+    background 150ms ease,
+    transform 130ms var(--ease);
+}
+
+.history-open {
+  transition:
+    color 150ms ease,
+    background 150ms ease,
+    transform 130ms var(--ease);
+}
+
+.history-open:hover {
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .range-input::-webkit-slider-thumb,
+  .range-value-popover,
+  .quick-date-thumb,
+  .quick-date-button,
+  .automation-thumb,
+  .automation-segment button,
+  .date-field input,
+  .automation-time input {
+    transition-duration: 0.001ms !important;
+  }
+}
