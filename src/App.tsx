@@ -83,7 +83,13 @@ export default function App() {
     window.localStorage.setItem("date-generator:settings", JSON.stringify({ xRatio, yRatio, fontRatio }));
   }, [xRatio, yRatio, fontRatio]);
 
-  useEffect(() => window.dateApp.onGenerationProgress(setProgress), []);
+  useEffect(() => {
+    if (!window.dateApp) {
+      setError("桌面桥接没有加载成功。请关闭当前窗口并重新运行 npm run dev；如果仍然出现，请查看启动终端里的 preload failed 信息。");
+      return;
+    }
+    return window.dateApp.onGenerationProgress(setProgress);
+  }, []);
 
   useEffect(() => {
     const current = templates[selectedIndex];
@@ -118,6 +124,10 @@ export default function App() {
 
   async function chooseTemplates() {
     setError("");
+    if (!window.dateApp) {
+      setError("桌面桥接没有加载成功，请重新启动应用。");
+      return;
+    }
     const selection = await window.dateApp.chooseTemplates();
     if (!selection) return;
     setTemplateDir(selection.dir);
@@ -152,6 +162,10 @@ export default function App() {
 
   async function chooseOutput() {
     setError("");
+    if (!window.dateApp) {
+      setError("桌面桥接没有加载成功，请重新启动应用。");
+      return;
+    }
     const next = await window.dateApp.chooseOutput();
     if (next) {
       setOutputDir(next);
