@@ -146,6 +146,8 @@ button { color: inherit; }
   font-weight: 650;
 }
 .secondary-button:hover { border-color: #d4ceeF; color: #5f50b7; background: #f7f4ff; }
+.secondary-button:disabled { opacity: .45; cursor: default; }
+.prepare-template-button { width: 100%; margin-top: 10px; }
 
 .segmented-control { padding: 3px; border-radius: 9px; display: flex; gap: 2px; background: #f1f2f6; }
 .segmented-control button { height: 26px; padding: 0 10px; border: 0; border-radius: 7px; color: #858c99; background: transparent; cursor: pointer; font-size: 9px; font-weight: 650; }
@@ -231,7 +233,7 @@ button { color: inherit; }
   animation: sheet-in 240ms var(--ease) both;
 }
 .document-sheet img { display: block; max-width: 100%; max-height: calc(100vh - 300px); width: auto; height: auto; user-select: none; -webkit-user-drag: none; }
-.date-overlay { position: absolute; transform: translateY(-50%); color: #111; white-space: nowrap; font-family: "Microsoft YaHei", "PingFang SC", sans-serif; line-height: 1; pointer-events: none; text-shadow: 0 0 1px rgba(255,255,255,.2); }
+.date-overlay { position: absolute; transform: translateY(-50%); color: #111; white-space: nowrap; font-family: SimHei, "Microsoft YaHei", "PingFang SC", sans-serif; font-weight: 600; line-height: 1; pointer-events: none; text-shadow: 0 0 1px rgba(255,255,255,.2); }
 .preview-empty { text-align: center; color: #8d94a1; }
 .empty-icon { width: 52px; height: 52px; margin: 0 auto 12px; border: 1px solid #e0e3e9; border-radius: 15px; display: grid; place-items: center; color: #8f85c8; background: rgba(255,255,255,.7); box-shadow: 0 8px 24px rgba(43,48,65,.06); }
 .preview-empty h3 { margin: 0; color: #626977; font-size: 12px; font-weight: 650; }
