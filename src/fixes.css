@@ -1,2 +1,3 @@
 .window-drag-region { pointer-events: auto; }
+.app-header { padding-right: 168px; }
 .document-sheet { container-type: normal; }
