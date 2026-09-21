@@ -12,10 +12,11 @@ IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
 
 @dataclass(frozen=True)
 class RenderSettings:
-    x_ratio: float = 0.285
-    y_ratio: float = 0.520
-    font_size_ratio: float = 0.035
-    bold: bool = False
+    # Defaults calibrated from the user's current self-operated label screenshots.
+    x_ratio: float = 0.132
+    y_ratio: float = 0.492
+    font_size_ratio: float = 0.043
+    bold: bool = True
 
 
 def clamp_ratio(value: float, low: float, high: float) -> float:
@@ -32,7 +33,8 @@ def list_templates(folder: Path) -> list[Path]:
 
 
 def date_text(value: date) -> str:
-    return f"{value.year}年{value.month}月{value.day}日"
+    # Match the current manually-produced labels, e.g. "2026 年 10 月 01 日".
+    return f"{value.year} 年 {value.month} 月 {value.day:02d} 日"
 
 
 def folder_name(value: date) -> str:
@@ -51,16 +53,17 @@ def iter_dates(start: date, end: date | None = None) -> Iterable[date]:
 
 
 def find_chinese_font(bold: bool = False) -> str | None:
+    # The source RTF uses 黑体 + bold for the production-date line.
     candidates = (
         [
-            r"C:\Windows\Fonts\msyhbd.ttc",
             r"C:\Windows\Fonts\simhei.ttf",
+            r"C:\Windows\Fonts\msyhbd.ttc",
             r"C:\Windows\Fonts\simsunb.ttf",
         ]
         if bold
         else [
-            r"C:\Windows\Fonts\msyh.ttc",
             r"C:\Windows\Fonts\simhei.ttf",
+            r"C:\Windows\Fonts\msyh.ttc",
             r"C:\Windows\Fonts\simsun.ttc",
         ]
     )
