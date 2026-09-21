@@ -4,6 +4,7 @@ import type {
   GenerationPayload,
   GenerationProgress,
   GenerationResult,
+  TemplateAnalysis,
   TemplatePreparationResult,
   TemplateSelection,
 } from "./types";
@@ -16,6 +17,7 @@ declare global {
       prepareTemplates: () => Promise<TemplatePreparationResult | null>;
       chooseOutput: () => Promise<string | null>;
       previewTemplate: (path: string) => Promise<string>;
+      analyzeTemplate: (path: string) => Promise<TemplateAnalysis>;
       runGeneration: (payload: GenerationPayload) => Promise<GenerationResult>;
       listHistory: () => Promise<GenerationHistoryItem[]>;
       clearHistory: () => Promise<boolean>;
