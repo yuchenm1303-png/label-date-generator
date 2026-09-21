@@ -361,13 +361,13 @@ async function runAutomaticGeneration() {
     mode: horizonDays > 1 ? "range" : "single",
     startDate,
     endDate,
-    xRatio: config.xRatio ?? 15.1,
-    yRatio: config.yRatio ?? 50.3,
-    fontRatio: config.fontRatio ?? 2.6,
+    xRatio: config.xRatio ?? 13.9,
+    yRatio: config.yRatio ?? 49.9,
+    fontRatio: config.fontRatio ?? 1.8,
     adaptivePosition: config.adaptivePosition ?? true,
     fontFamily: config.fontFamily ?? "simhei",
     bold: config.bold ?? false,
-    letterSpacing: config.letterSpacing ?? 0,
+    letterSpacing: config.letterSpacing ?? -7,
     skipExisting: true,
   };
 
