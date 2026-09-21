@@ -31,9 +31,9 @@ import type {
 } from "./types";
 
 const DEFAULTS = {
-  xRatio: 13.9,
+  xRatio: 14.3,
   yRatio: 49.9,
-  fontRatio: 1.8,
+  fontRatio: 4.0,
   adaptivePosition: true,
   fontFamily: "simhei" as FontFamily,
   bold: false,
@@ -45,6 +45,22 @@ const LEGACY_PRESETS = [
   { xRatio: 13.2, yRatio: 49.2, fontRatio: 4.3 },
   { xRatio: 15, yRatio: 50, fontRatio: 4.1 },
   { xRatio: 15.1, yRatio: 50.3, fontRatio: 2.6 },
+  { xRatio: 13.9, yRatio: 49.9, fontRatio: 1.8 },
+];
+
+const BUILTIN_PRESETS: ParameterPreset[] = [
+  {
+    id: "builtin-self-operated",
+    name: "自营标准",
+    xRatio: DEFAULTS.xRatio,
+    yRatio: DEFAULTS.yRatio,
+    fontRatio: DEFAULTS.fontRatio,
+    adaptivePosition: DEFAULTS.adaptivePosition,
+    fontFamily: DEFAULTS.fontFamily,
+    bold: DEFAULTS.bold,
+    letterSpacing: DEFAULTS.letterSpacing,
+    builtIn: true,
+  },
 ];
 
 function localDateValue(value = new Date()) {
@@ -97,7 +113,7 @@ export default function App() {
   const [fontFamily, setFontFamily] = useState<FontFamily>(DEFAULTS.fontFamily);
   const [bold, setBold] = useState(DEFAULTS.bold);
   const [letterSpacing, setLetterSpacing] = useState(DEFAULTS.letterSpacing);
-  const [presets, setPresets] = useState<ParameterPreset[]>([]);
+  const [presets, setPresets] = useState<ParameterPreset[]>(BUILTIN_PRESETS);
   const [selectedPresetId, setSelectedPresetId] = useState("");
   const [presetName, setPresetName] = useState("");
   const [progress, setProgress] = useState<GenerationProgress | null>(null);
@@ -123,7 +139,12 @@ export default function App() {
       if (storedPresets) {
         try {
           const parsedPresets = JSON.parse(storedPresets);
-          if (Array.isArray(parsedPresets) && !cancelled) setPresets(parsedPresets);
+          if (Array.isArray(parsedPresets) && !cancelled) {
+            const customPresets = parsedPresets.filter(
+              (preset) => preset?.id !== "builtin-self-operated" && preset?.name !== "自营标准",
+            );
+            setPresets([...BUILTIN_PRESETS, ...customPresets].slice(0, 12));
+          }
         } catch {
           // Ignore malformed old preset data.
         }
@@ -427,6 +448,11 @@ export default function App() {
       return;
     }
 
+    if (name === "自营标准") {
+      setError("“自营标准”是程序内置方案，会随默认参数自动更新，请使用其他名称保存自定义方案。");
+      return;
+    }
+
     const preset: ParameterPreset = {
       id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`,
       name,
@@ -446,6 +472,11 @@ export default function App() {
 
   function deletePreset() {
     if (!selectedPresetId) return;
+    const selected = presets.find((item) => item.id === selectedPresetId);
+    if (selected?.builtIn) {
+      setError("“自营标准”是程序内置方案，不能删除。");
+      return;
+    }
     setPresets((items) => items.filter((item) => item.id !== selectedPresetId));
     setSelectedPresetId("");
     setPresetName("");
